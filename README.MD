@@ -3,6 +3,7 @@
 ## Tổng quan
 
 Database này được thiết kế để quản lý một hệ thống dịch vụ (ví dụ: salon, spa, hoặc cửa hàng dịch vụ tương tự). Nó hỗ trợ các chức năng như quản lý người dùng, cửa hàng, dịch vụ, lịch hẹn, hóa đơn, lương nhân viên, và đánh giá. Các bảng được liên kết chặt chẽ thông qua khóa ngoại để đảm bảo tính toàn vẹn dữ liệu.
+Link view database: https://www.dbdiagram.io/d/Copy-of-sem4-67f29b384f7afba18485fa8c
 
 ## Mô tả các bảng
 
