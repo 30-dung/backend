@@ -4,6 +4,8 @@
 
 Database này được thiết kế để quản lý một hệ thống dịch vụ (ví dụ: salon, spa, hoặc cửa hàng dịch vụ tương tự). Nó hỗ trợ các chức năng như quản lý người dùng, cửa hàng, dịch vụ, lịch hẹn, hóa đơn, lương nhân viên, và đánh giá. Các bảng được liên kết chặt chẽ thông qua khóa ngoại để đảm bảo tính toàn vẹn dữ liệu.
 
+Link view database: https://www.dbdiagram.io/d/Copy-of-sem4-67f29b384f7afba18485fa8c
+
 ## Mô tả các bảng
 
 ### 1. Role (Vai trò)
@@ -19,8 +21,7 @@ Database này được thiết kế để quản lý một hệ thống dịch v
 - **Mô tả**: Lưu thông tin người dùng (bao gồm cả khách hàng và quản trị viên).
 - **Cột**:
   - `user_id` (INT, PK, AUTO_INCREMENT): Mã người dùng.
-  - `first_name` (VARCHAR(50), NOT NULL): Tên.
-  - `last_name` (VARCHAR(50), NOT NULL): Họ.
+  - `full_name` (VARCHAR(255), NOT NULL): Tên.
   - `email` (VARCHAR(255), UNIQUE, NOT NULL): Email.
   - `phone_number` (VARCHAR(20), NOT NULL): Số điện thoại.
   - `password` (VARCHAR(255), NOT NULL): Mật khẩu (đã mã hóa).
@@ -36,8 +37,8 @@ Database này được thiết kế để quản lý một hệ thống dịch v
   - `store_id` (INT, PK, AUTO_INCREMENT): Mã cửa hàng.
   - `store_name` (VARCHAR(255), NOT NULL): Tên cửa hàng.
   - `phone_number` (VARCHAR(20), NOT NULL): Số điện thoại.
-  - `latitude` (DECIMAL(10,8), NOT NULL): Vĩ độ.
-  - `longitude` (DECIMAL(11,8), NOT NULL): Kinh độ.
+  - `city_province` (VARCHAR(255), NOT NULL): Tỉnh Thành Phố
+  - `district`  (VARCHAR(255), NOT NULL): Quận huyện
   - `opening_time` (TIME, NOT NULL): Giờ mở cửa.
   - `closing_time` (TIME, NOT NULL): Giờ đóng cửa.
   - `description` (TEXT): Mô tả.
