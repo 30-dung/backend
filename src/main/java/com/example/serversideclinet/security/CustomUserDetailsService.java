@@ -23,18 +23,36 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
-        System.out.println("User found: " + user.getEmail());
-        System.out.println("User roles: " + user.getRoles());
+        // Tìm trong bảng User
+        Optional<User> userOptional = userRepository.findByEmail(email);
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            System.out.println("User found: " + user.getEmail());
+            System.out.println("User roles: " + user.getRoles());
 
-        UserDetails userDetails = new org.springframework.security.core.userdetails.User(
-                user.getEmail(),
-                user.getPassword(),
-                user.getRoles().stream()
-                        .map(role -> new SimpleGrantedAuthority(role.getRoleName()))
-                        .collect(Collectors.toList())
-        );
-        return userDetails;
+            return new org.springframework.security.core.userdetails.User(
+                    user.getEmail(),
+                    user.getPassword(),
+                    user.getRoles().stream()
+                            .map(role -> new SimpleGrantedAuthority(role.getRoleName()))
+                            .collect(Collectors.toList())
+            );
+        }
+
+        // Nếu không thấy trong User, tìm trong Employee
+        return employeeRepository.findByEmail(email)
+                .map(employee -> {
+                    System.out.println("Employee found: " + employee.getEmail());
+                    System.out.println("Employee roles: " + employee.getRoles());
+
+                    return new org.springframework.security.core.userdetails.User(
+                            employee.getEmail(),
+                            employee.getPassword(),
+                            employee.getRoles().stream()
+                                    .map(role -> new SimpleGrantedAuthority(role.getRoleName()))
+                                    .collect(Collectors.toList())
+                    );
+                })
+                .orElseThrow(() -> new UsernameNotFoundException("No user or employee found with email: " + email));
     }
 }
