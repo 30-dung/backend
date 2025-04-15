@@ -44,4 +44,10 @@ public class StoreController {
         List<Store> stores = storeService.findStoresByCityOrDistrict(city, district);
         return ResponseEntity.ok(stores);
     }
+
+    @GetMapping("/all")
+    public ResponseEntity<List<Store>> getAllStores() {
+        return ResponseEntity.ok(storeService.getAllStores());
+    }
+
 }
