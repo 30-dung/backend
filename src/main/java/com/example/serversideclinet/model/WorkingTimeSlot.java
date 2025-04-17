@@ -30,4 +30,52 @@ public class WorkingTimeSlot {
     private Boolean isAvailable = true;
 
     // Getters and Setters
+
+    public Integer getTimeSlotId() {
+        return timeSlotId;
+    }
+
+    public void setTimeSlotId(Integer timeSlotId) {
+        this.timeSlotId = timeSlotId;
+    }
+
+    public Store getStore() {
+        return store;
+    }
+
+    public void setStore(Store store) {
+        this.store = store;
+    }
+
+    public Employee getEmployee() {
+        return employee;
+    }
+
+    public void setEmployee(Employee employee) {
+        this.employee = employee;
+    }
+
+    public LocalDateTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(LocalDateTime startTime) {
+        this.startTime = startTime;
+    }
+
+    public LocalDateTime getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(LocalDateTime endTime) {
+        this.endTime = endTime;
+    }
+
+    public Boolean getIsAvailable() {
+        return isAvailable;
+    }
+
+    public void setIsAvailable(Boolean available) {
+        isAvailable = available;
+    }
 }
