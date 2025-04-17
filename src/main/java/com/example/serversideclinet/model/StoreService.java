@@ -1,10 +1,8 @@
 package com.example.serversideclinet.model;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 // StoreService.java
 @Entity
@@ -21,7 +19,7 @@ public class StoreService {
 
     @ManyToOne
     @JoinColumn(name = "service_id", nullable = false)
-    private Service service;
+    private ServiceEntity service;
 
     @Column(nullable = false)
     private BigDecimal price;
