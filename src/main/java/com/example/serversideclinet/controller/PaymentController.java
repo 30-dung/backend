@@ -27,7 +27,6 @@ public class PaymentController {
             return "redirect:/";
         }
     }
-
     @GetMapping("/payment/return")
     public String paymentReturn(@RequestParam Map<String, String> params, Model model) {
         String result = paymentService.verifyReturn(params);

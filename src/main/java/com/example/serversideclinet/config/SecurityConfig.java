@@ -34,6 +34,7 @@ public class SecurityConfig {
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/employee/**").hasRole("EMPLOYEE")
                         .requestMatchers("/api/store/**").permitAll() // Cho phép truy cập không cần auth
+                        .requestMatchers("/api/reviews/**").permitAll() // Cho phép truy cập không cần auth
                         .anyRequest().authenticated() // Các request khác cần auth
                 )
                 .sessionManagement(session -> session
