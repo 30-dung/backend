@@ -25,4 +25,36 @@ public class StoreService {
     private BigDecimal price;
 
     // Getters and Setters
+
+    public Integer getStoreServiceId() {
+        return storeServiceId;
+    }
+
+    public void setStoreServiceId(Integer storeServiceId) {
+        this.storeServiceId = storeServiceId;
+    }
+
+    public Store getStore() {
+        return store;
+    }
+
+    public void setStore(Store store) {
+        this.store = store;
+    }
+
+    public ServiceEntity getService() {
+        return service;
+    }
+
+    public void setService(ServiceEntity service) {
+        this.service = service;
+    }
+
+    public BigDecimal getPrice() {
+        return price;
+    }
+
+    public void setPrice(BigDecimal price) {
+        this.price = price;
+    }
 }

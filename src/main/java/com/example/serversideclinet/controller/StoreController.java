@@ -16,6 +16,7 @@ public class StoreController {
     private StoreService storeService;
 
     // Add store
+
     @PostMapping("/add")
     public ResponseEntity<Store> addStore(@RequestBody Store store) {
         Store newStore = storeService.addStore(store);
