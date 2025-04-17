@@ -1,7 +1,9 @@
 package com.example.serversideclinet.service;
 
 import com.example.serversideclinet.model.Review;
+import com.example.serversideclinet.model.User;
 import com.example.serversideclinet.repository.ReviewRepository;
+import com.example.serversideclinet.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
@@ -10,6 +12,8 @@ import org.springframework.stereotype.Service;
 public class ReviewService {
     @Autowired
     private ReviewRepository reviewRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     // thêm đánh giá
     public Review createReview(Review review) {
@@ -37,4 +41,7 @@ public class ReviewService {
         reviewRepository.deleteById(id);
     }
 
+    public User findUserByEmail(String email) {
+        return userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+    }
 }
