@@ -1,0 +1,56 @@
+package com.example.serversideclinet.controller;
+
+import com.example.serversideclinet.dto.AppointmentRequest;
+import com.example.serversideclinet.model.Appointment;
+import com.example.serversideclinet.service.AppointmentService;
+import com.example.serversideclinet.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/appointments")
+public class AppointmentController {
+
+    @Autowired
+    private AppointmentService appointmentService;
+
+    @Autowired
+    private UserService userService;
+
+    @PostMapping
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<Appointment> createAppointment(@RequestBody AppointmentRequest request, Authentication authentication) {
+        String email = authentication.getName();
+        try {
+            Appointment created = appointmentService.createAppointment(request, email);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+    }
+
+
+    @GetMapping
+    public ResponseEntity<List<Appointment>> getAllAppointments() {
+        List<Appointment> appointments = appointmentService.getAllAppointments();
+        return new ResponseEntity<>(appointments, HttpStatus.OK);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Appointment> getAppointmentById(@PathVariable("id") int id) {
+        Appointment appointment = appointmentService.getAppointmentById(id);
+        return appointment != null ? new ResponseEntity<>(appointment, HttpStatus.OK) : new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Appointment> updateAppointmentStatus(@PathVariable("id") int id, @RequestBody Appointment.Status status) {
+        Appointment updatedAppointment = appointmentService.updateAppointmentStatus(id, status);
+        return updatedAppointment != null ? new ResponseEntity<>(updatedAppointment, HttpStatus.OK) : new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+}

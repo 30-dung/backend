@@ -30,11 +30,18 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable()) // Tắt CSRF
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/login","/api/auth/register", "/error").permitAll() // Cho phép truy cập không cần auth
+                        .requestMatchers("/api/auth/login", "/api/auth/register", "/error").permitAll() // Cho phép truy cập không cần auth
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/employee/**").hasRole("EMPLOYEE")
                         .requestMatchers("/api/store/**").permitAll() // Cho phép truy cập không cần auth
                         .requestMatchers("/api/reviews/**").permitAll() // Cho phép truy cập không cần auth
+                        .requestMatchers("/api/appointments/**").hasRole("CUSTOMER")
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-resources/**",
+                                "/webjars/**"
+                        ).permitAll()
                         .anyRequest().authenticated() // Các request khác cần auth
                 )
                 .sessionManagement(session -> session
