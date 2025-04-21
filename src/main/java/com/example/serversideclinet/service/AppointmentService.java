@@ -77,23 +77,11 @@ public class AppointmentService {
     }
 
 
-
     // Các phương thức còn lại
     public List<Appointment> getAllAppointments() {
         return appointmentRepository.findAll();
     }
 
-    public Appointment getAppointmentById(int id) {
-        return appointmentRepository.findById(id).orElse(null);
-    }
 
-    @Transactional
-    public Appointment updateAppointmentStatus(int id, Appointment.Status status) {
-        Appointment appointment = appointmentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Appointment not found"));
-
-        appointment.setStatus(status);
-        return appointmentRepository.save(appointment);
-    }
 }
 

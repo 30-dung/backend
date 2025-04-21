@@ -23,13 +23,11 @@ public class ReviewController {
     public Review createReview(@RequestBody Review review) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication.getName(); // Lấy username/email từ token
-
         // Tìm User từ email
         User user = reviewService.findUserByEmail(email);
         if (user == null) {
             throw new RuntimeException("User not found");
         }
-
         review.setUser(user); // Gán user vào review
         return reviewService.createReview(review);
     }

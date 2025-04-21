@@ -35,22 +35,11 @@ public class AppointmentController {
         }
     }
 
-
     @GetMapping
     public ResponseEntity<List<Appointment>> getAllAppointments() {
         List<Appointment> appointments = appointmentService.getAllAppointments();
         return new ResponseEntity<>(appointments, HttpStatus.OK);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Appointment> getAppointmentById(@PathVariable("id") int id) {
-        Appointment appointment = appointmentService.getAppointmentById(id);
-        return appointment != null ? new ResponseEntity<>(appointment, HttpStatus.OK) : new ResponseEntity<>(HttpStatus.NOT_FOUND);
-    }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Appointment> updateAppointmentStatus(@PathVariable("id") int id, @RequestBody Appointment.Status status) {
-        Appointment updatedAppointment = appointmentService.updateAppointmentStatus(id, status);
-        return updatedAppointment != null ? new ResponseEntity<>(updatedAppointment, HttpStatus.OK) : new ResponseEntity<>(HttpStatus.NOT_FOUND);
-    }
 }

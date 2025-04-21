@@ -1,17 +1,21 @@
 package com.example.serversideclinet.service;
 
 import com.example.serversideclinet.dto.EmployeeRequestDTO;
+import com.example.serversideclinet.model.Appointment;
 import com.example.serversideclinet.model.Employee;
 import com.example.serversideclinet.model.Role;
 import com.example.serversideclinet.model.Store;
+import com.example.serversideclinet.repository.AppointmentRepository;
 import com.example.serversideclinet.repository.EmployeeRepository;
 import com.example.serversideclinet.repository.RoleRepository;
 import com.example.serversideclinet.repository.StoreRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Service
@@ -19,7 +23,8 @@ public class EmployeeService {
 
     @Autowired
     private EmployeeRepository employeeRepository;
-
+    @Autowired
+    private AppointmentRepository appointmentRepository;
     @Autowired
     private StoreRepository storeRepository;
 
@@ -47,7 +52,6 @@ public class EmployeeService {
         employee.setStore(store);
         employee.setRoles(roles);
         employee.setAvatarUrl(dto.getAvatarUrl());
-
         return employeeRepository.save(employee);
     }
 }
