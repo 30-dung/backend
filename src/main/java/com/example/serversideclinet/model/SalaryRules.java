@@ -28,4 +28,60 @@ public class SalaryRules {
     private Boolean isActive = true;
 
     // Getters and Setters
+
+    public Integer getRuleId() {
+        return ruleId;
+    }
+
+    public void setRuleId(Integer ruleId) {
+        this.ruleId = ruleId;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public BigDecimal getBaseSalary() {
+        return baseSalary;
+    }
+
+    public void setBaseSalary(BigDecimal baseSalary) {
+        this.baseSalary = baseSalary;
+    }
+
+    public BigDecimal getBonusPerAppointment() {
+        return bonusPerAppointment;
+    }
+
+    public void setBonusPerAppointment(BigDecimal bonusPerAppointment) {
+        this.bonusPerAppointment = bonusPerAppointment;
+    }
+
+    public BigDecimal getBonusPercentage() {
+        return bonusPercentage;
+    }
+
+    public void setBonusPercentage(BigDecimal bonusPercentage) {
+        this.bonusPercentage = bonusPercentage;
+    }
+
+    public LocalDateTime getEffectiveDate() {
+        return effectiveDate;
+    }
+
+    public void setEffectiveDate(LocalDateTime effectiveDate) {
+        this.effectiveDate = effectiveDate;
+    }
+
+    public Boolean getActive() {
+        return isActive;
+    }
+
+    public void setActive(Boolean active) {
+        isActive = active;
+    }
 }

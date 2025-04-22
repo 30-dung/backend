@@ -27,5 +27,45 @@ public class StoreServicePriceHistory {
     @CreationTimestamp
     private LocalDateTime createdAt;
 
-    // Getters and Setters
+    // Getters and Setters\
+
+    public Integer getPriceHistoryId() {
+        return priceHistoryId;
+    }
+
+    public void setPriceHistoryId(Integer priceHistoryId) {
+        this.priceHistoryId = priceHistoryId;
+    }
+
+    public StoreService getStoreService() {
+        return storeService;
+    }
+
+    public void setStoreService(StoreService storeService) {
+        this.storeService = storeService;
+    }
+
+    public BigDecimal getPrice() {
+        return price;
+    }
+
+    public void setPrice(BigDecimal price) {
+        this.price = price;
+    }
+
+    public LocalDateTime getEffectiveDate() {
+        return effectiveDate;
+    }
+
+    public void setEffectiveDate(LocalDateTime effectiveDate) {
+        this.effectiveDate = effectiveDate;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 }

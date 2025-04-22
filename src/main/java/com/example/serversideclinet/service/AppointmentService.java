@@ -35,6 +35,7 @@ public class AppointmentService {
     @Autowired
     private UserService userService;
 
+
     @Transactional
     public Appointment createAppointment(AppointmentRequest request, String userEmail) {
         // Tìm người dùng theo email
@@ -80,6 +81,39 @@ public class AppointmentService {
     // Các phương thức còn lại
     public List<Appointment> getAllAppointments() {
         return appointmentRepository.findAll();
+    }
+
+    @Transactional
+    public List<Appointment> getAppointmentsByEmployeeId(int employeeId) {
+        return appointmentRepository.findByEmployee_EmployeeId(employeeId);
+    }
+
+    @Transactional
+    public Appointment updateStatusByEmployee(int appointmentId, String newStatusStr, int employeeId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new RuntimeException("Appointment not found"));  // ✅ Kiểm tra lịch hẹn tồn tại
+
+        if (appointment.getEmployee() == null || appointment.getEmployee().getEmployeeId() != employeeId) {
+            throw new RuntimeException("This appointment does not belong to this employee."); // ✅ Bảo vệ: chỉ nhân viên đúng mới sửa được
+        }
+
+        Appointment.Status newStatus;
+        try {
+            newStatus = Appointment.Status.valueOf(newStatusStr.toUpperCase()); // ✅ Chuyển từ String sang enum
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid status value");                // ✅ Nếu sai tên enum thì báo lỗi
+        }
+
+        Appointment.Status currentStatus = appointment.getStatus();            // ✅ Lấy trạng thái hiện tại
+
+        // ✅ Logic kiểm tra luồng chuyển trạng thái hợp lệ
+        if ((currentStatus == Appointment.Status.PENDING && newStatus == Appointment.Status.CONFIRMED) ||
+                (currentStatus == Appointment.Status.CONFIRMED && newStatus == Appointment.Status.COMPLETED)) {
+            appointment.setStatus(newStatus);                                  // ✅ Gán trạng thái mới
+            return appointmentRepository.save(appointment);                    // ✅ Lưu lại thay đổi
+        } else {
+            throw new RuntimeException("Invalid status transition");           // ❌ Nếu luồng không đúng thì báo lỗi
+        }
     }
 
 

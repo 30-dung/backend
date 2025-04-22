@@ -31,7 +31,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable()) // Tắt CSRF
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login", "/api/auth/register", "/error").permitAll() // Cho phép truy cập không cần auth
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/admin/**").hasAnyRole("ADMIN", "EMPLOYEE")
                         .requestMatchers("/employee/**").hasRole("EMPLOYEE")
                         .requestMatchers("/api/store/**").permitAll() // Cho phép truy cập không cần auth
                         .requestMatchers("/api/reviews/**").permitAll() // Cho phép truy cập không cần auth

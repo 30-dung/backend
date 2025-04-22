@@ -14,7 +14,6 @@ public class ReviewService {
     private ReviewRepository reviewRepository;
     @Autowired
     private UserRepository userRepository;
-
     // thêm đánh giá
     public Review createReview(Review review) {
         // Kiểm tra các điều kiện đầu vào nếu cần (ví dụ: rating phải trong phạm vi từ 1 đến 5)

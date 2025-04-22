@@ -52,6 +52,8 @@ public class EmployeeService {
         employee.setStore(store);
         employee.setRoles(roles);
         employee.setAvatarUrl(dto.getAvatarUrl());
+
         return employeeRepository.save(employee);
     }
+
 }

@@ -10,11 +10,14 @@ import java.util.Collection;
 import java.util.stream.Collectors;
 
 public class CustomUserDetails implements UserDetails {
+
     private String email;
     private String password;
     private Collection<? extends GrantedAuthority> authorities;
     private boolean isEmployee;
+    private Integer employeeId;
 
+    // Constructor cho người dùng (User)
     public CustomUserDetails(User user) {
         this.email = user.getEmail();
         this.password = user.getPassword();
@@ -24,6 +27,7 @@ public class CustomUserDetails implements UserDetails {
         this.isEmployee = false;
     }
 
+    // Constructor cho nhân viên (Employee)
     public CustomUserDetails(Employee employee) {
         this.email = employee.getEmail();
         this.password = employee.getPassword();
@@ -31,6 +35,11 @@ public class CustomUserDetails implements UserDetails {
                 .map(role -> new SimpleGrantedAuthority(role.getRoleName()))
                 .collect(Collectors.toList());
         this.isEmployee = true;
+        this.employeeId = employee.getEmployeeId();
+    }
+
+    public Integer getEmployeeId() {
+        return employeeId;
     }
 
     @Override

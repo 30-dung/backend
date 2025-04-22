@@ -25,7 +25,6 @@ public class JwtFilter extends OncePerRequestFilter {
     @Autowired
     private CustomUserDetailsService userDetailsService;
 
-    // Sử dụng SLF4J Logger thay vì java.util.logging.Logger
     private static final Logger logger = LoggerFactory.getLogger(JwtFilter.class);
 
     @Override
@@ -58,4 +57,3 @@ public class JwtFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 }
-
