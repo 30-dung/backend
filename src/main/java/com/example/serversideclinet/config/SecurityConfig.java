@@ -36,6 +36,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/store/**").permitAll() // Cho phép truy cập không cần auth
                         .requestMatchers("/api/reviews/**").permitAll() // Cho phép truy cập không cần auth
                         .requestMatchers("/api/appointments/**").hasRole("CUSTOMER")
+                        .requestMatchers("/api/cart/**", "/api/orders/**").hasRole("CUSTOMER")
+                        .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",

@@ -36,6 +36,69 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
+//public class AuthController {
+//    @Autowired
+//    private AuthenticationManager authenticationManager;
+//    @Autowired
+//    private CustomUserDetailsService userDetailsService;
+//    @Autowired
+//    private UserRepository userRepository;
+//    @Autowired
+//    private EmployeeRepository employeeRepository;
+//    @Autowired
+//    private RoleRepository roleRepository;
+//    @Autowired
+//    private JwtUtil jwtUtil;
+//    @Autowired
+//    private PasswordEncoder passwordEncoder;
+//
+//    @PostMapping("/login")
+//    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
+//        Authentication authentication = authenticationManager.authenticate(
+//                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+//        );
+//
+//        SecurityContextHolder.getContext().setAuthentication(authentication);
+//        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getEmail());
+//        String token = jwtUtil.generateToken(userDetails);
+//
+//        String role = userDetails.getAuthorities().stream()
+//                .map(GrantedAuthority::getAuthority)
+//                .collect(Collectors.joining(","));
+//
+//        return ResponseEntity.ok(new AuthResponse(token, role));
+//    }
+//
+//
+//
+//    @PostMapping("/register")
+//    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+//        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+//            return ResponseEntity.badRequest().body("Email already exists");
+//        }
+//
+//        User user = new User();
+//        user.setFullName(request.getFullName());
+//        user.setEmail(request.getEmail());
+//        user.setPassword(passwordEncoder.encode(request.getPassword()));
+//        user.setPhoneNumber(request.getPhoneNumber());
+//        user.setMembershipType(MembershipType.valueOf(request.getMembershipType()));
+//        user.setLoyaltyPoints(0);
+//
+//        Optional<Role> customerRoleOpt = roleRepository.findByRoleName("ROLE_CUSTOMER");
+//        if (customerRoleOpt.isEmpty()) {
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+//                    .body("Role 'ROLE_CUSTOMER' not found in the system");
+//        }
+//
+//        Role customerRole = customerRoleOpt.get();
+//        user.setRoles(new HashSet<>(Collections.singletonList(customerRole)));
+//
+//        userRepository.save(user);
+//        return ResponseEntity.ok("User registered successfully");
+//    }
+//}
+
 public class AuthController {
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -60,7 +123,18 @@ public class AuthController {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetails userDetails = userDetailsService.loadUserByUsername(request.getEmail());
-        String token = jwtUtil.generateToken(userDetails);
+
+        Integer userId = null;
+        User user = userRepository.findByEmail(request.getEmail()).orElse(null);
+        if (user != null) {
+            userId = user.getUserId();
+        } else {
+            userId = employeeRepository.findByEmail(request.getEmail())
+                    .map(employee -> employee.getEmployeeId())
+                    .orElseThrow(() -> new RuntimeException("User or employee not found"));
+        }
+
+        String token = jwtUtil.generateToken(userDetails, userId);
 
         String role = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -68,8 +142,6 @@ public class AuthController {
 
         return ResponseEntity.ok(new AuthResponse(token, role));
     }
-
-
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
