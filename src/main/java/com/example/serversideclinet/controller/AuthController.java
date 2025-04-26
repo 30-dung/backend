@@ -1,8 +1,6 @@
 package com.example.serversideclinet.controller;
 
-import com.example.serversideclinet.dto.AuthResponse;
-import com.example.serversideclinet.dto.LoginRequest;
-import com.example.serversideclinet.dto.RegisterRequest;
+import com.example.serversideclinet.dto.*;
 import com.example.serversideclinet.model.MembershipType;
 import com.example.serversideclinet.model.Role;
 import com.example.serversideclinet.model.User;
@@ -13,6 +11,9 @@ import com.example.serversideclinet.security.CustomUserDetailsService;
 import com.example.serversideclinet.security.JwtUtil;
 
 
+import com.example.serversideclinet.service.PasswordResetService;
+import jakarta.mail.MessagingException;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -51,6 +52,8 @@ public class AuthController {
     private JwtUtil jwtUtil;
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private PasswordResetService passwordResetService;
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
@@ -72,7 +75,7 @@ public class AuthController {
 
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             return ResponseEntity.badRequest().body("Email already exists");
         }
@@ -96,5 +99,25 @@ public class AuthController {
 
         userRepository.save(user);
         return ResponseEntity.ok("User registered successfully");
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        try {
+            passwordResetService.sendOtp(request.getEmail());
+            return ResponseEntity.ok("OTP sent to your email");
+        } catch (MessagingException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to send OTP");
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        try {
+            passwordResetService.resetPassword(request.getToken(), request.getNewPassword());
+            return ResponseEntity.ok("Password reset successfully");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }
