@@ -1,9 +1,11 @@
 package com.example.serversideclinet.model;
+
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+
 // SalaryRules.java
 @Entity
 @Table(name = "SalaryRules")
