@@ -17,7 +17,7 @@ public class EmployeeController {
     private EmployeeService employeeService;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')") // Chỉ ADMIN mới tạo được
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Employee> createEmployee(@Valid @RequestBody EmployeeRequestDTO requestDTO) {
         Employee created = employeeService.createEmployee(requestDTO);
         return ResponseEntity.ok(created);

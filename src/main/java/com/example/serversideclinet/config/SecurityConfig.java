@@ -28,13 +28,13 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // Tắt CSRF
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/login", "/api/auth/register", "/error").permitAll() // Cho phép truy cập không cần auth
+                        .requestMatchers("/api/auth/login", "/api/auth/register","api/auth/forgot-password","api/auth/reset-password", "/error").permitAll() // Cho phép truy cập không cần auth
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/employee/**").hasRole("EMPLOYEE")
-                        .requestMatchers("/api/store/**").permitAll() // Cho phép truy cập không cần auth
-                        .requestMatchers("/api/reviews/**").permitAll() // Cho phép truy cập không cần auth
+                        .requestMatchers("/api/store/**").permitAll()
+                        .requestMatchers("/api/reviews/**").permitAll()
                         .requestMatchers("/api/appointments/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/cart/**", "/api/orders/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/public/**").permitAll()
@@ -50,7 +50,7 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // Không dùng session
                 );
 
-        // Thêm JWT filter trước UsernamePasswordAuthenticationFilter
+
         http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

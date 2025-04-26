@@ -11,4 +11,12 @@ public class CustomPrincipal {
         this.email = email;
         this.userId = userId;
     }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public Integer getUserId() {
+        return userId;
+    }
 }
