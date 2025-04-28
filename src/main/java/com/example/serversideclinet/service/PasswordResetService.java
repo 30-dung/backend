@@ -77,9 +77,29 @@ public class PasswordResetService {
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
         helper.setTo(to);
-        helper.setSubject("Password Reset OTP");
-        helper.setText("Your OTP for password reset is: <b>" + otp + "</b>. It is valid for 10 minutes.", true);
+        helper.setSubject("FourShine - Password Reset OTP");
+
+        String content = """
+            <html>
+            <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+                <div style="max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                    <h2 style="text-align: center; color: #4CAF50;">Password Reset Request</h2>
+                    <p>Hello,</p>
+                    <p>You have requested a password reset for your <strong>FourShine</strong> account.</p>
+                    <p>Your OTP is:</p>
+                    <div style="text-align: center; font-size: 24px; font-weight: bold; margin: 20px 0; color: #333;">%s</div>
+                    <p>This OTP is valid for <strong>10 minutes</strong>.</p>
+                    <p>If you did not request this, please ignore this email.</p>
+                    <br>
+                    <p>Best regards,<br>The FourShine Team</p>
+                </div>
+            </body>
+            </html>
+            """.formatted(otp);
+
+        helper.setText(content, true);
 
         mailSender.send(message);
     }
+
 }
