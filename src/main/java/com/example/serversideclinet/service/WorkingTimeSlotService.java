@@ -36,7 +36,6 @@ public class WorkingTimeSlotService {
         slot.setStartTime(request.getStartTime());
         slot.setEndTime(request.getEndTime());
         slot.setIsAvailable(true);
-
         return workingTimeSlotRepository.save(slot);
     }
 }
