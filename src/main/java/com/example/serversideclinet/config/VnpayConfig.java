@@ -1,12 +1,12 @@
 package com.example.serversideclinet.config;
 
-
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class VnpayConfig {
-    public static final String VNP_TMN_CODE = "BQMKV9RT";
-    public static final String VNP_HASH_SECRET = "318MDPE32TPEE1Z1X2RZGW6K5ADEDFST";
-    public static final String VNP_URL = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
-    public static final String VNP_RETURN_URL = "http://localhost:8080/payment/return";
+    // Lấy thông tin từ VNPAY email
+    public static final String VNP_TMN_CODE = "0GAZQ65O"; // Mã Website
+    public static final String VNP_HASH_SECRET = "QAM8J01M408VIEMXRYPL7JPTW8O3F4SP"; // Secret Key
+    public static final String VNP_URL = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"; // URL thanh toán
+    public static final String VNP_RETURN_URL = "http://localhost:9090/payment/return"; // URL xử lý kết quả trả về
 }
