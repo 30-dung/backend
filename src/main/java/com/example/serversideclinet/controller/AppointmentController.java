@@ -25,15 +25,18 @@ public class AppointmentController {
 
     @PostMapping
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<Appointment> createAppointment(@RequestBody AppointmentRequest request, Authentication authentication) {
+    public ResponseEntity<?> createAppointment(@RequestBody AppointmentRequest request, Authentication authentication) {
         String email = authentication.getName();
         try {
             Appointment created = appointmentService.createAppointment(request, email);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        } catch (AppointmentService.AppointmentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi hệ thống: " + e.getMessage());
         }
     }
+
 
     @GetMapping
     public ResponseEntity<List<Appointment>> getAllAppointments() {

@@ -13,4 +13,6 @@ import java.util.Optional;
 public interface InvoiceRepository extends JpaRepository<Invoice, Integer> {
     Optional<Invoice> findFirstByUserAndStatus(User user, InvoiceStatus status);
     List<Invoice> findByUserAndStatus(User user, InvoiceStatus invoiceStatus);
+    List<Invoice> findByUser(User user);
+
 }

@@ -4,6 +4,7 @@ import com.example.serversideclinet.model.Invoice;
 import com.example.serversideclinet.model.InvoiceStatus;
 import com.example.serversideclinet.repository.InvoiceRepository;
 import com.example.serversideclinet.security.CustomUserDetails;
+import com.example.serversideclinet.service.EmailService;
 import com.example.serversideclinet.service.VnpayService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,9 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/payment")
 public class PaymentController {
+
+    @Autowired
+    private EmailService emailService;
 
     @Autowired
     private VnpayService vnpayService;
@@ -56,19 +60,59 @@ public class PaymentController {
         }
 
         Invoice invoice = invoiceOpt.get();
+
+        if (invoice.getStatus() == InvoiceStatus.PAID) {
+            return ResponseEntity.ok("Hóa đơn đã được thanh toán trước đó.");
+        }
+
         String responseCode = allParams.get("vnp_ResponseCode");
         String transactionStatus = allParams.get("vnp_TransactionStatus");
 
+        String userEmail = invoice.getUser().getEmail();
+
         if (!"00".equals(responseCode) || !"00".equals(transactionStatus)) {
-            // Nếu giao dịch bị hủy/thất bại → cập nhật trạng thái
-            invoice.setStatus(InvoiceStatus.CANCELED); // Bạn nên có enum này
+            invoice.setStatus(InvoiceStatus.CANCELED);
             invoiceRepository.save(invoice);
-            return ResponseEntity.status(HttpStatus.OK).body("Giao dịch bị hủy hoặc thất bại.");
+
+            try {
+                emailService.sendInvoiceEmail(
+                        userEmail,
+                        "Thanh toán thất bại - BarberShop",
+                        """
+                        <p>Xin chào,</p>
+                        <p>Hóa đơn <strong>#%d</strong> không thể thanh toán do lỗi hoặc bị hủy.</p>
+                        <p>Vui lòng thử lại hoặc liên hệ với chúng tôi để được hỗ trợ.</p>
+                        <p>Trân trọng,<br/><strong>BarberShop - 30 Dark</strong></p>
+                        """.formatted(invoice.getInvoiceId())
+                );
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            return ResponseEntity.ok("Giao dịch bị từ chối hoặc thất bại. Mã lỗi: " + responseCode);
         }
 
-        // Nếu thành công
+        // Thanh toán thành công
         invoice.setStatus(InvoiceStatus.PAID);
         invoiceRepository.save(invoice);
-        return ResponseEntity.ok("Thanh toán thành công!");
+
+        try {
+            emailService.sendInvoiceEmail(
+                    userEmail,
+                    "Thanh toán thành công - BarberShop",
+                    """
+                    <p>Xin chào,</p>
+                    <p>Hóa đơn <strong>#%d</strong> của bạn đã được thanh toán thành công.</p>
+                    <p>Số tiền: <strong>%s VND</strong></p>
+                    <p>Cảm ơn bạn đã tin tưởng sử dụng dịch vụ của chúng tôi.</p>
+                    <p>Trân trọng,<br/><strong>BarberShop - 30 Dark</strong></p>
+                    """.formatted(invoice.getInvoiceId(), invoice.getTotalAmount())
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return ResponseEntity.ok("Thanh toán thành công cho hóa đơn #" + invoice.getInvoiceId());
     }
+
 }

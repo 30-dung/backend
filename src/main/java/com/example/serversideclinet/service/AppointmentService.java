@@ -32,22 +32,30 @@ public class AppointmentService {
 
     @Transactional
     public Appointment createAppointment(AppointmentRequest request, String userEmail) {
+        if (request.getTimeSlotId() == null) {
+            throw new AppointmentException("Time slot ID không được để trống.");
+        }
+
+        if (request.getStoreServiceId() == null) {
+            throw new AppointmentException("StoreService ID không được để trống.");
+        }
+
         // Lấy user
         User user = userService.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new AppointmentException("Không tìm thấy người dùng."));
 
         // Lấy time slot
         WorkingTimeSlot timeSlot = workingTimeSlotRepository.findById(request.getTimeSlotId())
-                .orElseThrow(() -> new RuntimeException("Time slot not found"));
+                .orElseThrow(() -> new AppointmentException("Không tìm thấy khung giờ làm việc."));
 
         if (!timeSlot.getIsAvailable()) {
-            throw new RuntimeException("Time slot is already booked");
+            throw new AppointmentException("Khung giờ đã được đặt.");
         }
 
         // Lấy employee và store service
         Employee employee = timeSlot.getEmployee();
         StoreService storeService = storeServiceRepository.findById(request.getStoreServiceId())
-                .orElseThrow(() -> new RuntimeException("StoreService not found"));
+                .orElseThrow(() -> new AppointmentException("Không tìm thấy dịch vụ."));
 
         // Tạo appointment
         Appointment appointment = new Appointment();
@@ -63,7 +71,7 @@ public class AppointmentService {
         timeSlot.setIsAvailable(false);
         workingTimeSlotRepository.save(timeSlot);
 
-        // Tạo hóa đơn nếu user chưa có invoice nào PENDING
+        // Tạo hóa đơn nếu chưa có
         Invoice invoice = invoiceRepository
                 .findFirstByUserAndStatus(user, InvoiceStatus.PENDING)
                 .orElseGet(() -> {
@@ -74,12 +82,12 @@ public class AppointmentService {
                     return invoiceRepository.save(newInvoice);
                 });
 
-        // Tính toán tổng giá trị hóa đơn
+        // Tổng tiền cũ
         BigDecimal totalAmount = invoice.getInvoiceDetails().stream()
                 .map(InvoiceDetail::getUnitPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Tạo invoice detail cho dịch vụ vừa đặt
+        // Chi tiết hóa đơn
         InvoiceDetail invoiceDetail = new InvoiceDetail();
         invoiceDetail.setInvoice(invoice);
         invoiceDetail.setAppointment(appointment);
@@ -90,13 +98,19 @@ public class AppointmentService {
         invoiceDetail.setDescription(storeService.getService().getServiceName());
         invoiceDetailRepository.save(invoiceDetail);
 
-        // Cập nhật tổng giá trị của hóa đơn
-        totalAmount = totalAmount.add(invoiceDetail.getUnitPrice());  // Cộng đơn giá vào tổng giá trị
-        invoice.setTotalAmount(totalAmount);  // Cập nhật totalAmount
-        invoiceRepository.save(invoice);  // Lưu hóa đơn với tổng giá trị cập nhật
+        // Cập nhật lại tổng tiền
+        totalAmount = totalAmount.add(invoiceDetail.getUnitPrice());
+        invoice.setTotalAmount(totalAmount);
+        invoiceRepository.save(invoice);
 
         return appointment;
     }
+    public class AppointmentException extends RuntimeException {
+        public AppointmentException(String message) {
+            super(message);
+        }
+    }
+
 
     public List<Appointment> getAllAppointments() {
         return appointmentRepository.findAll();

@@ -35,10 +35,30 @@ public class EmployeeService {
     private PasswordEncoder passwordEncoder;
 
     public Employee createEmployee(EmployeeRequestDTO dto) {
-        Store store = storeRepository.findById(dto.getStoreId())
-                .orElseThrow(() -> new RuntimeException("Store not found"));
+        // Kiểm tra mã nhân viên
+        if (employeeRepository.existsByEmployeeCode(dto.getEmployeeCode())) {
+            throw new RuntimeException("Mã nhân viên đã tồn tại");
+        }
 
-        Set<Role> roles = new HashSet<>(roleRepository.findAllById(dto.getRoleIds()));
+        // Kiểm tra email
+        if (employeeRepository.existsByEmail(dto.getEmail())) {
+            throw new RuntimeException("Email đã được sử dụng");
+        }
+
+        // Kiểm tra số điện thoại
+        if (employeeRepository.existsByPhoneNumber(dto.getPhoneNumber())) {
+            throw new RuntimeException("Số điện thoại đã được sử dụng");
+        }
+
+        // Kiểm tra store
+        Store store = storeRepository.findById(dto.getStoreId())
+                .orElseThrow(() -> new RuntimeException("Store không tồn tại"));
+
+        // Kiểm tra roles
+        List<Role> roles = roleRepository.findAllById(dto.getRoleIds());
+        if (roles.size() != dto.getRoleIds().size()) {
+            throw new RuntimeException("Một hoặc nhiều role không tồn tại");
+        }
 
         Employee employee = new Employee();
         employee.setEmployeeCode(dto.getEmployeeCode());
@@ -50,10 +70,9 @@ public class EmployeeService {
         employee.setDateOfBirth(dto.getDateOfBirth());
         employee.setSpecialization(dto.getSpecialization());
         employee.setStore(store);
-        employee.setRoles(roles);
+        employee.setRoles(new HashSet<>(roles));
         employee.setAvatarUrl(dto.getAvatarUrl());
 
         return employeeRepository.save(employee);
     }
-
 }
