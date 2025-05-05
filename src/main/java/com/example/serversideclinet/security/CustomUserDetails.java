@@ -16,6 +16,7 @@ public class CustomUserDetails implements UserDetails {
     private Collection<? extends GrantedAuthority> authorities;
     private boolean isEmployee;
     private Integer employeeId;
+    private Integer userId; // ✅ thêm userId
 
     // Constructor cho người dùng (User)
     public CustomUserDetails(User user) {
@@ -25,6 +26,7 @@ public class CustomUserDetails implements UserDetails {
                 .map(role -> new SimpleGrantedAuthority(role.getRoleName()))
                 .collect(Collectors.toList());
         this.isEmployee = false;
+        this.userId = user.getUserId(); // ✅ gán userId
     }
 
     // Constructor cho nhân viên (Employee)
@@ -40,6 +42,14 @@ public class CustomUserDetails implements UserDetails {
 
     public Integer getEmployeeId() {
         return employeeId;
+    }
+
+    public Integer getUserId() {
+        return userId;
+    }
+
+    public boolean isEmployee() {
+        return isEmployee;
     }
 
     @Override
@@ -75,9 +85,5 @@ public class CustomUserDetails implements UserDetails {
     @Override
     public boolean isEnabled() {
         return true;
-    }
-
-    public boolean isEmployee() {
-        return isEmployee;
     }
 }

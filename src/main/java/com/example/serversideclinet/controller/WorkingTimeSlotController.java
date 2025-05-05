@@ -6,10 +6,9 @@ import com.example.serversideclinet.service.WorkingTimeSlotService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/employee/working-time-slots")
@@ -23,4 +22,11 @@ public class WorkingTimeSlotController {
         WorkingTimeSlot createdSot = slotService.createSlot(request);
         return ResponseEntity.ok(createdSot);
     }
+    @GetMapping
+    @PreAuthorize("hasRole('EMPLOYEE')")
+    public ResponseEntity<List<WorkingTimeSlot>> getMyWorkingSlots() {
+        List<WorkingTimeSlot> slots = slotService.getMyWorkingSlots();
+        return ResponseEntity.ok(slots);
+    }
+
 }

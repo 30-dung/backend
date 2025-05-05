@@ -32,25 +32,6 @@ public class EmployeeController {
         return ResponseEntity.ok(created);
     }
 
-    @GetMapping("/appointments")
-    @PreAuthorize("hasRole('EMPLOYEE')")
-    public ResponseEntity<List<Appointment>> getAppointmentsByEmployee(
-            @AuthenticationPrincipal CustomUserDetails employeeDetails) {
-        int employeeId = employeeDetails.getEmployeeId();
-        List<Appointment> appointments = appointmentService.getAppointmentsByEmployeeId(employeeId);
-        return ResponseEntity.ok(appointments);
-    }
 
-    @PutMapping("/appointments/{id}/status")
-    @PreAuthorize("hasRole('EMPLOYEE')")
-    public ResponseEntity<Appointment> updateAppointmentStatus(
-            @PathVariable("id") int appointmentId,
-            @RequestParam("status") String newStatus,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-
-        int employeeId = userDetails.getEmployeeId();
-        Appointment updated = appointmentService.updateStatusByEmployee(appointmentId, newStatus, employeeId);
-        return ResponseEntity.ok(updated);
-    }
 }
 
