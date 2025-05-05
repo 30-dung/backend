@@ -9,13 +9,19 @@ import java.util.Set;
 public class EmployeeRequestDTO {
     @NotBlank
     private String employeeCode;
-
+    @NotBlank(message = "Full name is required")
     private String fullName;
-    @Email
+    @NotBlank(message = "Email is required")
+    @Email(message = "Invalid email format")
     private String email;
-
+    @NotBlank(message = "Password is required")
+    @Pattern(
+            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$",
+            message = "Password must be at least 8 characters, include uppercase, lowercase, number, and special character"
+    )
     private String password;
-
+    @NotBlank(message = "Phone number is required")
+    @Pattern(regexp = "^\\d{10}$", message = "Phone number must be 10 digits")
     private String phoneNumber;
 
     private Gender gender;

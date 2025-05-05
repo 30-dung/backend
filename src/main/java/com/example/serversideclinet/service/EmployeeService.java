@@ -35,10 +35,15 @@ public class EmployeeService {
     private PasswordEncoder passwordEncoder;
 
     public Employee createEmployee(EmployeeRequestDTO dto) {
+        if (employeeRepository.findByEmail(dto.getEmail()).isPresent()) {
+            throw new IllegalArgumentException("Email đã tồn tại. Vui lòng sử dụng email khác.");
+        }
+
         Store store = storeRepository.findById(dto.getStoreId())
                 .orElseThrow(() -> new RuntimeException("Store not found"));
 
         Set<Role> roles = new HashSet<>(roleRepository.findAllById(dto.getRoleIds()));
+
 
         Employee employee = new Employee();
         employee.setEmployeeCode(dto.getEmployeeCode());
