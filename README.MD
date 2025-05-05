@@ -6,6 +6,7 @@ Database này được thiết kế để quản lý một hệ thống dịch v
 
 Link view database: https://www.dbdiagram.io/d/Copy-of-sem4-67f29b384f7afba18485fa8c
 
+
 ## Mô tả các bảng
 
 ### 1. Role (Vai trò)
