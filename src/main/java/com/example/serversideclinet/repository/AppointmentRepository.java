@@ -10,5 +10,6 @@ import java.util.Optional;
 
 public interface AppointmentRepository extends JpaRepository<Appointment, Integer> {
 
-    List<Appointment> findByUserAndStatus(User user, Appointment.Status status);
+
+    List<Appointment> findByUserOrderByCreatedAtDesc(User user);
 }
