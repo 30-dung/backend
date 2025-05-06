@@ -44,22 +44,35 @@ public class AppointmentService {
         User user = userService.findByEmail(userEmail)
                 .orElseThrow(() -> new AppointmentException("Không tìm thấy người dùng."));
 
-        // Lấy time slot
+        // Lấy WorkingTimeSlot và kiểm tra khả dụng
         WorkingTimeSlot timeSlot = workingTimeSlotRepository.findById(request.getTimeSlotId())
                 .orElseThrow(() -> new AppointmentException("Không tìm thấy khung giờ làm việc."));
 
+        // Kiểm tra sự khả dụng của slot cho khoảng thời gian yêu cầu
+        LocalDateTime start = request.getStartTime(); // Lấy startTime từ request
+        LocalDateTime end = request.getEndTime(); // Lấy endTime từ request
 
+        if (!timeSlot.checkAvailability(start, end)) {
+            throw new AppointmentException("Khung giờ này không khả dụng.");
+        }
+
+        // Tạo AppointmentTimeSlot mới trong WorkingTimeSlot
+        AppointmentTimeSlot appointmentTimeSlot = timeSlot.createAppointmentSlot(start, end);
+        if (appointmentTimeSlot == null) {
+            throw new AppointmentException("Không thể tạo slot mới vì đã có xung đột thời gian.");
+        }
 
         // Lấy employee và store service
         Employee employee = timeSlot.getEmployee();
         StoreService storeService = storeServiceRepository.findById(request.getStoreServiceId())
                 .orElseThrow(() -> new AppointmentException("Không tìm thấy dịch vụ."));
 
-        // Tạo appointment
+        // Tạo Appointment và liên kết với AppointmentTimeSlot mới
         Appointment appointment = new Appointment();
         appointment.setUser(user);
         appointment.setStoreService(storeService);
         appointment.setEmployee(employee);
+        appointment.setAppointmentTimeSlot(appointmentTimeSlot); // Liên kết với AppointmentTimeSlot
         appointment.setStatus(Appointment.Status.PENDING);
         appointment.setNotes(request.getNotes());
         appointment = appointmentRepository.save(appointment);
@@ -101,6 +114,7 @@ public class AppointmentService {
 
         return appointment;
     }
+
     public class AppointmentException extends RuntimeException {
         public AppointmentException(String message) {
             super(message);
