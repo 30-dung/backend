@@ -1,12 +1,8 @@
 package com.example.serversideclinet.model;
 
-
 import jakarta.persistence.*;
-
 import java.time.LocalDateTime;
-import java.util.Optional;
 
-// Appointment.java
 @Entity
 public class Appointment {
     @Id
@@ -21,9 +17,10 @@ public class Appointment {
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
-    @ManyToOne
-    @JoinColumn(name = "time_slot_id", nullable = false, unique = true)
-    private WorkingTimeSlot timeSlot;
+    // Thay đổi từ WorkingTimeSlot sang AppointmentTimeSlot
+    @OneToOne
+    @JoinColumn(name = "appointment_time_slot_id", nullable = false)
+    private AppointmentTimeSlot appointmentTimeSlot;
 
     @ManyToOne
     @JoinColumn(name = "store_service_id", nullable = false)
@@ -42,6 +39,7 @@ public class Appointment {
         PENDING, CONFIRMED, COMPLETED, CANCELED
     }
 
+    // Getters and Setters cập nhật
     public Integer getAppointmentId() {
         return appointmentId;
     }
@@ -66,12 +64,12 @@ public class Appointment {
         this.employee = employee;
     }
 
-    public WorkingTimeSlot getTimeSlot() {
-        return timeSlot;
+    public AppointmentTimeSlot getAppointmentTimeSlot() {
+        return appointmentTimeSlot;
     }
 
-    public void setTimeSlot(WorkingTimeSlot timeSlot) {
-        this.timeSlot = timeSlot;
+    public void setAppointmentTimeSlot(AppointmentTimeSlot appointmentTimeSlot) {
+        this.appointmentTimeSlot = appointmentTimeSlot;
     }
 
     public StoreService getStoreService() {
@@ -113,5 +111,4 @@ public class Appointment {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
-
 }

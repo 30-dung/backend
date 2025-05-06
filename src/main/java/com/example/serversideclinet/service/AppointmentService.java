@@ -48,9 +48,7 @@ public class AppointmentService {
         WorkingTimeSlot timeSlot = workingTimeSlotRepository.findById(request.getTimeSlotId())
                 .orElseThrow(() -> new AppointmentException("Không tìm thấy khung giờ làm việc."));
 
-        if (!timeSlot.getIsAvailable()) {
-            throw new AppointmentException("Khung giờ đã được đặt.");
-        }
+
 
         // Lấy employee và store service
         Employee employee = timeSlot.getEmployee();
@@ -60,7 +58,6 @@ public class AppointmentService {
         // Tạo appointment
         Appointment appointment = new Appointment();
         appointment.setUser(user);
-        appointment.setTimeSlot(timeSlot);
         appointment.setStoreService(storeService);
         appointment.setEmployee(employee);
         appointment.setStatus(Appointment.Status.PENDING);
@@ -68,7 +65,6 @@ public class AppointmentService {
         appointment = appointmentRepository.save(appointment);
 
         // Đánh dấu slot đã được dùng
-        timeSlot.setIsAvailable(false);
         workingTimeSlotRepository.save(timeSlot);
 
         // Tạo hóa đơn nếu chưa có

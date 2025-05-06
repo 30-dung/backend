@@ -81,7 +81,6 @@ public class WorkingTimeSlotService {
         slot.setStore(store);
         slot.setStartTime(start);
         slot.setEndTime(end);
-        slot.setIsAvailable(true);
 
         return workingTimeSlotRepository.save(slot);
     }
