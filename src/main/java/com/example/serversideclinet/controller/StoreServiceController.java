@@ -28,13 +28,5 @@ public class StoreServiceController {
                 .status(HttpStatus.CREATED)
                 .body(created);
     }
-    @PutMapping("/{storeServiceId}/price")
-    public ResponseEntity<StoreService> updateStoreServicePrice(
-            @PathVariable int storeServiceId,
-            @RequestParam BigDecimal newPrice
-    ) {
-        StoreService updated = storeServiceService.updateServicePrice(storeServiceId, newPrice);
-        return ResponseEntity.ok(updated);
-    }
 
 }

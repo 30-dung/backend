@@ -23,8 +23,6 @@ public class StoreServiceService {
     private ServiceRepository serviceRepository;
 
 
-    @Autowired
-    private StoreServicePriceHistoryRepository StoreServicePriceHistoryRepository;
 
     public StoreService createStoreService(StoreServiceRequest req) {
         // Từ đây req.getStoreId(), getServiceId(), getPrice() sẽ tìm được
