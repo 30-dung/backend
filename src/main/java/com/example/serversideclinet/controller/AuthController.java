@@ -9,8 +9,6 @@ import com.example.serversideclinet.repository.RoleRepository;
 import com.example.serversideclinet.repository.UserRepository;
 import com.example.serversideclinet.security.CustomUserDetailsService;
 import com.example.serversideclinet.security.JwtUtil;
-
-
 import com.example.serversideclinet.service.PasswordResetService;
 import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
@@ -19,16 +17,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -37,6 +33,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
+@CrossOrigin(origins = "http://localhost:5173", allowedHeaders = "*", methods = {RequestMethod.POST, RequestMethod.GET, RequestMethod.OPTIONS})
 public class AuthController {
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -56,28 +53,34 @@ public class AuthController {
     private PasswordResetService passwordResetService;
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            );
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getEmail());
-        String token = jwtUtil.generateToken(userDetails);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            UserDetails userDetails = userDetailsService.loadUserByUsername(request.getEmail());
+            String token = jwtUtil.generateToken(userDetails);
 
-        String role = userDetails.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.joining(","));
+            String role = userDetails.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.joining(","));
 
-        return ResponseEntity.ok(new AuthResponse(token, role));
+            return ResponseEntity.ok(new AuthResponse(token, role));
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new AuthResponse(null, "Invalid email or password"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new AuthResponse(null, "Login failed: " + e.getMessage()));
+        }
     }
 
-
-
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            return ResponseEntity.badRequest().body("Email already exists");
+            return ResponseEntity.badRequest().body(new AuthResponse(null, "Email already exists"));
         }
 
         User user = new User();
@@ -91,14 +94,22 @@ public class AuthController {
         Optional<Role> customerRoleOpt = roleRepository.findByRoleName("ROLE_CUSTOMER");
         if (customerRoleOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Role 'ROLE_CUSTOMER' not found in the system");
+                    .body(new AuthResponse(null, "Role 'ROLE_CUSTOMER' not found in the system"));
         }
 
         Role customerRole = customerRoleOpt.get();
         user.setRoles(new HashSet<>(Collections.singletonList(customerRole)));
 
         userRepository.save(user);
-        return ResponseEntity.ok("User registered successfully");
+
+        // Tạo token JWT sau khi đăng ký thành công
+        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getEmail());
+        String token = jwtUtil.generateToken(userDetails);
+        String role = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.joining(","));
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(new AuthResponse(token, role));
     }
 
     @PostMapping("/forgot-password")
