@@ -1,8 +1,10 @@
     package com.example.serversideclinet.model;
 
+    import com.fasterxml.jackson.annotation.JsonManagedReference;
     import jakarta.persistence.*;
     import java.time.LocalDateTime;
     import java.util.HashSet;
+    import java.util.List;
     import java.util.Set;
 
     @Entity
@@ -18,8 +20,11 @@
         @ManyToOne
         @JoinColumn(name = "store_id", nullable = false)
         private Store store;
-
+        @OneToMany(mappedBy = "employee")
+        @JsonManagedReference
+        private List<Appointment> appointments;
         @ManyToMany(fetch = FetchType.EAGER)
+
         @JoinTable(
                 name = "employees_roles",
                 joinColumns = @JoinColumn(name = "employee_id"),
@@ -29,8 +34,6 @@
 
         @Column(nullable = false, length = 255)
         private String fullName;
-
-
 
         @Column(length = 512)
         private String avatarUrl;
@@ -43,7 +46,8 @@
 
         @Column(length = 20)
         private String phoneNumber;
-
+        @Column(nullable = false)
+        private int kpiPoints;
         @Enumerated(EnumType.STRING)
         private Gender gender;
 
@@ -183,5 +187,11 @@
             this.updatedAt = updatedAt;
         }
 
+        public int getKpiPoints() {
+            return kpiPoints;
+        }
 
+        public void setKpiPoints(int kpiPoints) {
+            this.kpiPoints = kpiPoints;
+        }
     }

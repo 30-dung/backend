@@ -1,5 +1,6 @@
 package com.example.serversideclinet.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -15,8 +16,8 @@ public class Appointment {
 
     @ManyToOne
     @JoinColumn(name = "employee_id", nullable = false)
+    @JsonBackReference
     private Employee employee;
-
     // Thay đổi từ WorkingTimeSlot sang AppointmentTimeSlot
     @OneToOne
     @JoinColumn(name = "appointment_time_slot_id", nullable = false)

@@ -1,5 +1,6 @@
 package com.example.serversideclinet.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -12,6 +13,7 @@ public class AppointmentTimeSlot {
 
     @ManyToOne
     @JoinColumn(name = "working_time_slot_id", nullable = false)
+    @JsonBackReference
     private WorkingTimeSlot workingTimeSlot;
 
     @OneToOne(mappedBy = "appointmentTimeSlot")

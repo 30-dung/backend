@@ -1,5 +1,6 @@
 package com.example.serversideclinet.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -28,6 +29,7 @@ public class WorkingTimeSlot {
 
     // Thêm quan hệ OneToMany với AppointmentTimeSlot
     @OneToMany(mappedBy = "workingTimeSlot", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<AppointmentTimeSlot> appointmentTimeSlots = new ArrayList<>();
 
     private Boolean isActive = true;

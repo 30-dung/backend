@@ -1,5 +1,6 @@
 package com.example.serversideclinet.controller;
 
+import com.example.serversideclinet.dto.InvoiceDTO;
 import com.example.serversideclinet.model.Invoice;
 import com.example.serversideclinet.model.InvoiceStatus;
 import com.example.serversideclinet.model.User;
@@ -13,42 +14,45 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
+
 @RestController
 @RequestMapping("/api/invoices")
 public class InvoiceController {
 
     @Autowired
     private InvoiceService invoiceService;
+
     @GetMapping
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<List<Invoice>> getAllInvoicesForUser() {
+    public ResponseEntity<List<InvoiceDTO>> getAllInvoicesForUser() {
         User user = getUserFromPrincipal();
-        List<Invoice> invoices = invoiceService.findAllByUser(user);
-        return ResponseEntity.ok(invoices);
+        List<InvoiceDTO> invoiceDTOs = invoiceService.findAllByUser(user);
+        return ResponseEntity.ok(invoiceDTOs);
     }
 
     @GetMapping("/pending")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<List<Invoice>> getPendingInvoices() {
+    public ResponseEntity<List<InvoiceDTO>> getPendingInvoices() {
         User user = getUserFromPrincipal();
-        List<Invoice> invoices = invoiceService.findByStatus(user, InvoiceStatus.PENDING);
-        return ResponseEntity.ok(invoices);
+        List<InvoiceDTO> invoiceDTOs = invoiceService.findByStatus(user, InvoiceStatus.PENDING);
+        return ResponseEntity.ok(invoiceDTOs);
     }
 
     @GetMapping("/paid")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<List<Invoice>> getPaidInvoices() {
+    public ResponseEntity<List<InvoiceDTO>> getPaidInvoices() {
         User user = getUserFromPrincipal();
-        List<Invoice> invoices = invoiceService.findByStatus(user, InvoiceStatus.PAID);
-        return ResponseEntity.ok(invoices);
+        List<InvoiceDTO> invoiceDTOs = invoiceService.findByStatus(user, InvoiceStatus.PAID);
+        return ResponseEntity.ok(invoiceDTOs);
     }
 
     @GetMapping("/cancelled")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<List<Invoice>> getCancelledInvoices() {
+    public ResponseEntity<List<InvoiceDTO>> getCancelledInvoices() {
         User user = getUserFromPrincipal();
-        List<Invoice> invoices = invoiceService.findByStatus(user, InvoiceStatus.CANCELED);
-        return ResponseEntity.ok(invoices);
+        List<InvoiceDTO> invoiceDTOs = invoiceService.findByStatus(user, InvoiceStatus.CANCELED);
+        return ResponseEntity.ok(invoiceDTOs);
     }
 
     private User getUserFromPrincipal() {

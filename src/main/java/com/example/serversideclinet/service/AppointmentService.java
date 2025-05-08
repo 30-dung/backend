@@ -1,16 +1,9 @@
 package com.example.serversideclinet.service;
 
 import com.example.serversideclinet.dto.AppointmentRequest;
-import com.example.serversideclinet.model.Appointment;
-import com.example.serversideclinet.model.AppointmentTimeSlot;
-import com.example.serversideclinet.model.User;
-import com.example.serversideclinet.model.Invoice;
-import com.example.serversideclinet.model.InvoiceStatus;
-import com.example.serversideclinet.model.StoreService;
-import com.example.serversideclinet.model.InvoiceDetail;
-import com.example.serversideclinet.model.WorkingTimeSlot;
+import com.example.serversideclinet.model.*;
 import com.example.serversideclinet.repository.*;
-import com.example.serversideclinet.model.Employee;
+import com.example.serversideclinet.model.StoreService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,7 +11,6 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class AppointmentService {
@@ -53,6 +45,7 @@ public class AppointmentService {
         if (request.getStoreServiceId() == null) {
             throw new AppointmentException("StoreService ID không được để trống.");
         }
+
         // Lấy user
         User user = userService.findByEmail(userEmail)
                 .orElseThrow(() -> new AppointmentException("Không tìm thấy người dùng."));
@@ -111,9 +104,9 @@ public class AppointmentService {
         // Tạo hóa đơn nếu chưa có
         createOrUpdateInvoice(user, appointment, employee, storeService);
 
+        // Trả về Appointment trực tiếp
         return appointment;
     }
-
 
     private void validateAppointmentTime(LocalDateTime start, LocalDateTime end, WorkingTimeSlot timeSlot) {
         if (start == null || end == null) {
@@ -164,46 +157,14 @@ public class AppointmentService {
         invoiceRepository.save(invoice);
     }
 
-    @Transactional
-    public Appointment updateAppointmentStatus(Integer appointmentId, Appointment.Status newStatus) {
-        Appointment appointment = appointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new AppointmentException("Không tìm thấy lịch hẹn với ID: " + appointmentId));
-
-        appointment.setStatus(newStatus);
-
-        // Nếu hủy lịch hẹn, giải phóng AppointmentTimeSlot
-        if (newStatus == Appointment.Status.CANCELED) {
-            AppointmentTimeSlot timeSlot = appointment.getAppointmentTimeSlot();
-            if (timeSlot != null) {
-                timeSlot.setIsBooked(false);
-                appointmentTimeSlotRepository.save(timeSlot);
-            }
-        }
-
-        return appointmentRepository.save(appointment);
-    }
-
     public List<Appointment> getAllAppointments() {
-        return appointmentRepository.findAll();
+        // Fetch all appointments from the repository
+        return appointmentRepository.findAll(); // Trả về danh sách Appointment trực tiếp
     }
 
-    public List<Appointment> getAppointmentsByUser(String userEmail) {
-        Optional<User> userOptional = userService.findByEmail(userEmail);
-        if (!userOptional.isPresent()) {
-            throw new AppointmentException("Không tìm thấy người dùng.");
-        }
-
-        return appointmentRepository.findByUserOrderByCreatedAtDesc(userOptional.get());
-    }
-
-    public List<Appointment> getAppointmentsByEmployee(String employeeEmail) {
-        // Cần thêm EmployeeService để tìm kiếm employee theo email
-        // Employee employee = employeeService.findByEmail(employeeEmail)...
-
-        // Giả định đã có phương thức tìm kiếm appointments theo employee
-        // return appointmentRepository.findByEmployeeOrderByCreatedAtDesc(employee);
-
-        throw new UnsupportedOperationException("Chức năng này chưa được triển khai.");
+    // Get all appointments with PENDING status, and return as Appointment objects
+    public List<Appointment> getAllPendingAppointments() {
+        return appointmentRepository.findByStatus(Appointment.Status.PENDING);
     }
 
     public class AppointmentException extends RuntimeException {
