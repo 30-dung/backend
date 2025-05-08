@@ -53,7 +53,6 @@ public class AppointmentService {
         if (request.getStoreServiceId() == null) {
             throw new AppointmentException("StoreService ID không được để trống.");
         }
-
         // Lấy user
         User user = userService.findByEmail(userEmail)
                 .orElseThrow(() -> new AppointmentException("Không tìm thấy người dùng."));
@@ -64,11 +63,21 @@ public class AppointmentService {
 
         // Kiểm tra sự khả dụng của slot cho khoảng thời gian yêu cầu
         LocalDateTime start = request.getStartTime(); // Lấy startTime từ request
-        LocalDateTime end = request.getEndTime(); // Lấy endTime từ request
+        if (start == null) {
+            throw new AppointmentException("Thời gian bắt đầu không được để trống.");
+        }
+
+        // Lấy thời gian kết thúc dựa trên dịch vụ
+        StoreService storeService = storeServiceRepository.findById(request.getStoreServiceId())
+                .orElseThrow(() -> new AppointmentException("Không tìm thấy dịch vụ."));
+
+        int serviceDurationMinutes = storeService.getService().getDurationMinutes(); // Lấy thời gian dịch vụ từ StoreService
+        LocalDateTime end = start.plusMinutes(serviceDurationMinutes); // Tính thời gian kết thúc
 
         // Kiểm tra thời gian hợp lệ
         validateAppointmentTime(start, end, timeSlot);
 
+        // Kiểm tra sự khả dụng của thời gian slot
         if (!timeSlot.checkAvailability(start, end)) {
             throw new AppointmentException("Khung giờ này không khả dụng.");
         }
@@ -84,8 +93,6 @@ public class AppointmentService {
 
         // Lấy employee và store service
         Employee employee = timeSlot.getEmployee();
-        StoreService storeService = storeServiceRepository.findById(request.getStoreServiceId())
-                .orElseThrow(() -> new AppointmentException("Không tìm thấy dịch vụ."));
 
         // Tạo Appointment và liên kết với AppointmentTimeSlot mới
         Appointment appointment = new Appointment();
@@ -106,6 +113,7 @@ public class AppointmentService {
 
         return appointment;
     }
+
 
     private void validateAppointmentTime(LocalDateTime start, LocalDateTime end, WorkingTimeSlot timeSlot) {
         if (start == null || end == null) {
