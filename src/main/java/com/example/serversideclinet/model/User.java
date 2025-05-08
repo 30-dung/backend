@@ -1,5 +1,6 @@
 package com.example.serversideclinet.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -14,8 +15,6 @@ public class User {
     @Column(nullable = false, length = 50)
     private String fullName;
 
-
-
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
@@ -29,13 +28,12 @@ public class User {
     @Column(nullable = false)
     private MembershipType membershipType = MembershipType.REGULAR;
 
-
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.EAGER) // Changed to LAZY to avoid eager loading
     @JoinTable(name = "users_roles",
             joinColumns = @JoinColumn(name = "userId"),
             inverseJoinColumns = @JoinColumn(name = "roleId"))
+    @JsonIgnoreProperties("users")
     private Set<Role> roles;
-
 
     @Column(nullable = false, columnDefinition = "INT default 0")
     private Integer loyaltyPoints = 0;
@@ -44,7 +42,6 @@ public class User {
     private LocalDateTime createdAt = LocalDateTime.now();
 
     // Getters and Setters
-
     public Integer getUserId() {
         return userId;
     }
@@ -116,6 +113,4 @@ public class User {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
-
-
 }

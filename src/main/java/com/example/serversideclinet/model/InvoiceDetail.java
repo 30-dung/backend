@@ -1,10 +1,10 @@
 package com.example.serversideclinet.model;
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 
-// InvoiceDetail.java
 @Entity
 @Table(name = "InvoiceDetail")
 public class InvoiceDetail {
@@ -14,7 +14,7 @@ public class InvoiceDetail {
 
     @ManyToOne
     @JoinColumn(name = "invoice_id", nullable = false)
-    @JsonBackReference
+    @JsonBackReference("invoice-details")
     private Invoice invoice;
 
     @OneToOne
@@ -23,6 +23,7 @@ public class InvoiceDetail {
 
     @ManyToOne
     @JoinColumn(name = "employee_id")
+    @JsonIgnoreProperties({"appointments", "roles"})
     private Employee employee;
 
     @ManyToOne
@@ -36,8 +37,7 @@ public class InvoiceDetail {
 
     private Integer quantity = 1;
 
-    // Getters and Setters
-
+    // Getters and Setters remain the same
     public Integer getDetailId() {
         return detailId;
     }

@@ -2,8 +2,8 @@ package com.example.serversideclinet.service;
 
 import com.example.serversideclinet.dto.AppointmentRequest;
 import com.example.serversideclinet.model.*;
-import com.example.serversideclinet.repository.*;
 import com.example.serversideclinet.model.StoreService;
+import com.example.serversideclinet.repository.*;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -81,10 +81,7 @@ public class AppointmentService {
             throw new AppointmentException("Không thể tạo slot mới vì đã có xung đột thời gian.");
         }
 
-        // Lưu AppointmentTimeSlot trước
-        appointmentTimeSlot = appointmentTimeSlotRepository.save(appointmentTimeSlot);
-
-        // Lấy employee và store service
+        // Lấy employee
         Employee employee = timeSlot.getEmployee();
 
         // Tạo Appointment và liên kết với AppointmentTimeSlot mới
@@ -92,35 +89,24 @@ public class AppointmentService {
         appointment.setUser(user);
         appointment.setStoreService(storeService);
         appointment.setEmployee(employee);
-        appointment.setAppointmentTimeSlot(appointmentTimeSlot); // Liên kết với AppointmentTimeSlot
         appointment.setStatus(Appointment.Status.PENDING);
         appointment.setNotes(request.getNotes());
-        appointment = appointmentRepository.save(appointment);
 
         // Thiết lập mối quan hệ hai chiều
+        appointment.getAppointmentTimeSlots().add(appointmentTimeSlot);
         appointmentTimeSlot.setAppointment(appointment);
-        appointmentTimeSlotRepository.save(appointmentTimeSlot);
 
-        // Tạo hóa đơn nếu chưa có
+        // Lưu AppointmentTimeSlot trước
+        appointmentTimeSlot = appointmentTimeSlotRepository.save(appointmentTimeSlot);
+
+        // Lưu Appointment sau
+        appointment = appointmentRepository.save(appointment);
+
+        // Gọi hàm tạo hoặc cập nhật hóa đơn
         createOrUpdateInvoice(user, appointment, employee, storeService);
 
         // Trả về Appointment trực tiếp
         return appointment;
-    }
-
-    private void validateAppointmentTime(LocalDateTime start, LocalDateTime end, WorkingTimeSlot timeSlot) {
-        if (start == null || end == null) {
-            throw new AppointmentException("Thời gian bắt đầu và kết thúc không được để trống.");
-        }
-
-        if (!start.isBefore(end)) {
-            throw new AppointmentException("Thời gian bắt đầu phải trước thời gian kết thúc.");
-        }
-
-        // Kiểm tra thời gian đặt lịch nằm trong khoảng thời gian làm việc
-        if (start.isBefore(timeSlot.getStartTime()) || end.isAfter(timeSlot.getEndTime())) {
-            throw new AppointmentException("Thời gian đặt lịch phải nằm trong khung giờ làm việc của nhân viên.");
-        }
     }
 
     private void createOrUpdateInvoice(User user, Appointment appointment, Employee employee, StoreService storeService) {
@@ -157,12 +143,27 @@ public class AppointmentService {
         invoiceRepository.save(invoice);
     }
 
-    public List<Appointment> getAllAppointments() {
-        // Fetch all appointments from the repository
-        return appointmentRepository.findAll(); // Trả về danh sách Appointment trực tiếp
+    private void validateAppointmentTime(LocalDateTime start, LocalDateTime end, WorkingTimeSlot timeSlot) {
+        if (start == null || end == null) {
+            throw new AppointmentException("Thời gian bắt đầu và kết thúc không được để trống.");
+        }
+
+        if (!start.isBefore(end)) {
+            throw new AppointmentException("Thời gian bắt đầu phải trước thời gian kết thúc.");
+        }
+
+        // Kiểm tra thời gian đặt lịch nằm trong khoảng thời gian làm việc
+        if (start.isBefore(timeSlot.getStartTime()) || end.isAfter(timeSlot.getEndTime())) {
+            throw new AppointmentException("Thời gian đặt lịch phải nằm trong khung giờ làm việc của nhân viên.");
+        }
     }
 
-    // Get all appointments with PENDING status, and return as Appointment objects
+    // Trả về danh sách tất cả các cuộc hẹn
+    public List<Appointment> getAllAppointments() {
+        return appointmentRepository.findAll();
+    }
+
+    // Trả về danh sách các cuộc hẹn chưa được xác nhận (Pending)
     public List<Appointment> getAllPendingAppointments() {
         return appointmentRepository.findByStatus(Appointment.Status.PENDING);
     }

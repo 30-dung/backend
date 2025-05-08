@@ -1,5 +1,6 @@
 package com.example.serversideclinet.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
@@ -19,6 +20,7 @@ public class WorkingTimeSlot {
 
     @ManyToOne
     @JoinColumn(name = "employee_id", nullable = false)
+    @JsonIgnoreProperties({"appointments", "roles"})
     private Employee employee;
 
     @Column(nullable = false)
@@ -27,30 +29,28 @@ public class WorkingTimeSlot {
     @Column(nullable = false)
     private LocalDateTime endTime;
 
-    // Thêm quan hệ OneToMany với AppointmentTimeSlot
     @OneToMany(mappedBy = "workingTimeSlot", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference
+    @JsonManagedReference("working-appointment-slots")
     private List<AppointmentTimeSlot> appointmentTimeSlots = new ArrayList<>();
 
     private Boolean isActive = true;
 
-    // Thêm phương thức tiện ích để kiểm tra sự khả dụng
+    // Utility methods
     public Boolean checkAvailability(LocalDateTime start, LocalDateTime end) {
         if (!isActive) return false;
 
         for (AppointmentTimeSlot slot : appointmentTimeSlots) {
             if (slot.getIsBooked() &&
                     (start.isBefore(slot.getEndTime()) && end.isAfter(slot.getStartTime()))) {
-                return false; // Có xung đột thời gian
+                return false; // Time conflict
             }
         }
-        return true; // Không có xung đột
+        return true; // No conflict
     }
 
-    // Thêm phương thức tạo slot hẹn mới
     public AppointmentTimeSlot createAppointmentSlot(LocalDateTime start, LocalDateTime end) {
         if (!checkAvailability(start, end)) {
-            return null; // Không thể tạo slot mới vì đã có xung đột
+            return null; // Cannot create new slot due to conflict
         }
 
         AppointmentTimeSlot newSlot = new AppointmentTimeSlot();
@@ -62,7 +62,7 @@ public class WorkingTimeSlot {
         return newSlot;
     }
 
-    // Getters and Setters
+    // Getters and Setters remain the same
     public Integer getTimeSlotId() {
         return timeSlotId;
     }

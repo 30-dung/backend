@@ -3,13 +3,13 @@ package com.example.serversideclinet.controller;
 import com.example.serversideclinet.dto.AppointmentRequest;
 import com.example.serversideclinet.model.Appointment;
 import com.example.serversideclinet.service.AppointmentService;
-import com.example.serversideclinet.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
 import javax.validation.Valid;
 import java.util.List;
 
@@ -26,8 +26,8 @@ public class AppointmentController {
     public ResponseEntity<?> createAppointment(@Valid @RequestBody AppointmentRequest request, Authentication authentication) {
         String email = authentication.getName();
         try {
-            Appointment created = appointmentService.createAppointment(request, email);  // Trả về Appointment thay vì AppointmentDTO
-            return ResponseEntity.status(HttpStatus.CREATED).body(created);  // Trả về Appointment entity trực tiếp
+            Appointment created = appointmentService.createAppointment(request, email);  // Return Appointment entity directly
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);  // Return Appointment entity directly
         } catch (AppointmentService.AppointmentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid appointment request: " + e.getMessage());
         } catch (Exception e) {
@@ -35,18 +35,18 @@ public class AppointmentController {
         }
     }
 
-    // Get all pending appointments
-    @GetMapping("/pending")
-    public ResponseEntity<List<Appointment>> getAllPendingAppointments() {
-        List<Appointment> appointments = appointmentService.getAllPendingAppointments();  // Trả về danh sách Appointment thay vì AppointmentDTO
-        return new ResponseEntity<>(appointments, HttpStatus.OK);
-    }
-
-    // Get All Appointments
     @GetMapping
     public ResponseEntity<List<Appointment>> getAllAppointments() {
-        List<Appointment> appointments = appointmentService.getAllAppointments();  // Trả về danh sách Appointment thay vì AppointmentDTO
-        return new ResponseEntity<>(appointments, HttpStatus.OK);
+        // Directly return the list of Appointment entities
+        List<Appointment> appointments = appointmentService.getAllAppointments();
+        return ResponseEntity.ok(appointments);
+    }
+
+    @GetMapping("/pending")
+    public ResponseEntity<List<Appointment>> getAllPendingAppointments() {
+        // Directly return the list of Appointment entities
+        List<Appointment> appointments = appointmentService.getAllPendingAppointments();
+        return ResponseEntity.ok(appointments);
     }
 
     // Error Handling for Validation

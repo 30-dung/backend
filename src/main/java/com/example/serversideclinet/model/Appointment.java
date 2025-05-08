@@ -1,8 +1,15 @@
 package com.example.serversideclinet.model;
 
+import com.example.serversideclinet.model.AppointmentTimeSlot;
+import com.example.serversideclinet.model.StoreService;
+import com.example.serversideclinet.model.User;
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Entity
 public class Appointment {
@@ -12,16 +19,18 @@ public class Appointment {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnoreProperties("appointments")
     private User user;
 
     @ManyToOne
     @JoinColumn(name = "employee_id", nullable = false)
-    @JsonBackReference
+    @JsonBackReference("employee-appointments") // back reference for employee
     private Employee employee;
-    // Thay đổi từ WorkingTimeSlot sang AppointmentTimeSlot
-    @OneToOne
-    @JoinColumn(name = "appointment_time_slot_id", nullable = false)
-    private AppointmentTimeSlot appointmentTimeSlot;
+
+    @OneToMany(mappedBy = "appointment", cascade = CascadeType.ALL)
+    @JsonManagedReference("appointment-appointment-time-slot") // managed reference for AppointmentTimeSlot
+    @JsonIgnoreProperties("appointment") // avoid infinite recursion on the other side
+    private Set<AppointmentTimeSlot> appointmentTimeSlots;
 
     @ManyToOne
     @JoinColumn(name = "store_service_id", nullable = false)
@@ -40,7 +49,8 @@ public class Appointment {
         PENDING, CONFIRMED, COMPLETED, CANCELED
     }
 
-    // Getters and Setters cập nhật
+    // Getters and Setters
+
     public Integer getAppointmentId() {
         return appointmentId;
     }
@@ -65,12 +75,12 @@ public class Appointment {
         this.employee = employee;
     }
 
-    public AppointmentTimeSlot getAppointmentTimeSlot() {
-        return appointmentTimeSlot;
+    public Set<AppointmentTimeSlot> getAppointmentTimeSlots() {
+        return appointmentTimeSlots;
     }
 
-    public void setAppointmentTimeSlot(AppointmentTimeSlot appointmentTimeSlot) {
-        this.appointmentTimeSlot = appointmentTimeSlot;
+    public void setAppointmentTimeSlots(Set<AppointmentTimeSlot> appointmentTimeSlots) {
+        this.appointmentTimeSlots = appointmentTimeSlots;
     }
 
     public StoreService getStoreService() {

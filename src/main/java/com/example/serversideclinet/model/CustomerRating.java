@@ -1,7 +1,9 @@
 package com.example.serversideclinet.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "CustomerRating")
 public class CustomerRating {
@@ -11,16 +13,17 @@ public class CustomerRating {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnoreProperties("ratings")
     private User user;
 
     @ManyToOne
     @JoinColumn(name = "employee_id", nullable = false)
+    @JsonIgnoreProperties("ratings")
     private Employee employee;
 
     @ManyToOne
     @JoinColumn(name = "appointment_id")
     private Appointment appointment;
-
 
     @Column(nullable = false)
     private Integer stars; // Số sao đánh giá (1-5)
@@ -33,6 +36,7 @@ public class CustomerRating {
     @Column(nullable = false)
     private LocalDateTime ratingDate = LocalDateTime.now();
 
+    // Getters and Setters remain the same
     public Integer getRatingId() {
         return ratingId;
     }
@@ -64,8 +68,6 @@ public class CustomerRating {
     public void setAppointment(Appointment appointment) {
         this.appointment = appointment;
     }
-
-
 
     public Integer getStars() {
         return stars;

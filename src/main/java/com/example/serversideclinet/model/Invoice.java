@@ -1,8 +1,7 @@
 package com.example.serversideclinet.model;
 
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -13,7 +12,6 @@ import java.util.List;
 
 @Entity
 @Table(name = "Invoice")
-@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "invoiceId")
 public class Invoice {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,9 +19,10 @@ public class Invoice {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnoreProperties("invoices")
     private User user;
 
-    @Column(nullable = true) // <-- Cho phép null
+    @Column(nullable = true)
     private BigDecimal totalAmount;
 
     @Enumerated(EnumType.STRING)
@@ -33,10 +32,10 @@ public class Invoice {
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference
+    @JsonManagedReference("invoice-details")
     private List<InvoiceDetail> invoiceDetails = new ArrayList<>();
 
-    // Getters & Setters
+    // Getters & Setters remain the same
     public Integer getInvoiceId() {
         return invoiceId;
     }

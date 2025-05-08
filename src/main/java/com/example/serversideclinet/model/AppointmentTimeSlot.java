@@ -1,7 +1,10 @@
 package com.example.serversideclinet.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -13,10 +16,12 @@ public class AppointmentTimeSlot {
 
     @ManyToOne
     @JoinColumn(name = "working_time_slot_id", nullable = false)
-    @JsonBackReference
+    @JsonBackReference("working-appointment-slots")
     private WorkingTimeSlot workingTimeSlot;
 
-    @OneToOne(mappedBy = "appointmentTimeSlot")
+    @ManyToOne
+    @JoinColumn(name = "appointment_id", nullable = false)
+    @JsonBackReference("appointment-appointment-time-slot")
     private Appointment appointment;
 
     @Column(nullable = false)
@@ -28,6 +33,7 @@ public class AppointmentTimeSlot {
     private Boolean isBooked = false;
 
     // Getters and Setters
+
     public Integer getSlotId() {
         return slotId;
     }
@@ -72,7 +78,7 @@ public class AppointmentTimeSlot {
         return isBooked;
     }
 
-    public void setIsBooked(Boolean booked) {
-        isBooked = booked;
+    public void setIsBooked(Boolean isBooked) {
+        this.isBooked = isBooked;
     }
 }

@@ -50,4 +50,6 @@ public class AppointmentRequest {
     public void setEndTime(LocalDateTime endTime) {
         this.endTime = endTime;
     }
+
+
 }
