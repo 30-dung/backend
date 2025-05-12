@@ -1,32 +1,30 @@
 package com.example.serversideclinet.dto;
 
+import lombok.Getter;
+
+import java.time.LocalDateTime;
+
+@Getter
 public class AppointmentRequest {
+    // Getters and Setters
     private Integer timeSlotId;
     private Integer storeServiceId;
     private String notes;
-    // getters + setters
-
-    public Integer getTimeSlotId() {
-        return timeSlotId;
-    }
+    private LocalDateTime startTime;  // Thời gian bắt đầu cụ thể cho cuộc hẹn
 
     public void setTimeSlotId(Integer timeSlotId) {
         this.timeSlotId = timeSlotId;
-    }
-
-    public Integer getStoreServiceId() {
-        return storeServiceId;
     }
 
     public void setStoreServiceId(Integer storeServiceId) {
         this.storeServiceId = storeServiceId;
     }
 
-    public String getNotes() {
-        return notes;
-    }
-
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public void setStartTime(LocalDateTime startTime) {
+        this.startTime = startTime;
     }
 }

@@ -1,12 +1,9 @@
 package com.example.serversideclinet.model;
 
-
+import com.fasterxml.jackson.annotation.*;
 import jakarta.persistence.*;
-
 import java.time.LocalDateTime;
-import java.util.Optional;
 
-// Appointment.java
 @Entity
 public class Appointment {
     @Id
@@ -15,17 +12,30 @@ public class Appointment {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIdentityReference(alwaysAsId = true)
     private User user;
+
     @ManyToOne
     @JoinColumn(name = "employee_id", nullable = false)
+    @JsonIdentityReference(alwaysAsId = true)
     private Employee employee;
 
     @ManyToOne
-    @JoinColumn(name = "time_slot_id", nullable = false, unique = true)
-    private WorkingTimeSlot timeSlot;
+    @JoinColumn(name = "working_slot_id", nullable = false)
+    @JsonIdentityReference(alwaysAsId = true)
+    // Add JsonBackReference to break the circular reference with WorkingTimeSlot
+    @JsonBackReference("slot-appointments")
+    private WorkingTimeSlot workingSlot;
+
+    @Column(nullable = false)
+    private LocalDateTime startTime;
+
+    @Column(nullable = false)
+    private LocalDateTime endTime;
 
     @ManyToOne
     @JoinColumn(name = "store_service_id", nullable = false)
+    @JsonIdentityReference(alwaysAsId = true)
     private StoreService storeService;
 
     private String notes;
@@ -41,6 +51,7 @@ public class Appointment {
         PENDING, CONFIRMED, COMPLETED, CANCELED
     }
 
+    // Getters and Setters remain the same
     public Integer getAppointmentId() {
         return appointmentId;
     }
@@ -65,12 +76,28 @@ public class Appointment {
         this.employee = employee;
     }
 
-    public WorkingTimeSlot getTimeSlot() {
-        return timeSlot;
+    public WorkingTimeSlot getWorkingSlot() {
+        return workingSlot;
     }
 
-    public void setTimeSlot(WorkingTimeSlot timeSlot) {
-        this.timeSlot = timeSlot;
+    public void setWorkingSlot(WorkingTimeSlot workingSlot) {
+        this.workingSlot = workingSlot;
+    }
+
+    public LocalDateTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(LocalDateTime startTime) {
+        this.startTime = startTime;
+    }
+
+    public LocalDateTime getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(LocalDateTime endTime) {
+        this.endTime = endTime;
     }
 
     public StoreService getStoreService() {
@@ -112,5 +139,4 @@ public class Appointment {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
-
 }

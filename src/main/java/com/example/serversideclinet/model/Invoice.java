@@ -1,7 +1,6 @@
 package com.example.serversideclinet.model;
 
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import com.fasterxml.jackson.annotation.*;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -22,7 +21,7 @@ public class Invoice {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = true) // <-- Cho phép null
+    @Column(nullable = true)
     private BigDecimal totalAmount;
 
     @Enumerated(EnumType.STRING)
@@ -32,15 +31,20 @@ public class Invoice {
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference("invoice-details")  // Thêm annotation này
     private List<InvoiceDetail> invoiceDetails = new ArrayList<>();
 
-    // Getters & Setters
     public Integer getInvoiceId() {
         return invoiceId;
     }
 
     public void setInvoiceId(Integer invoiceId) {
         this.invoiceId = invoiceId;
+    }
+
+    // Thêm phương thức này để JPA có thể tìm thuộc tính "id"
+    public Integer getId() {
+        return invoiceId;
     }
 
     public User getUser() {

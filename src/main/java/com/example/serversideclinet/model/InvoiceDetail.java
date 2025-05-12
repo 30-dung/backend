@@ -1,4 +1,6 @@
 package com.example.serversideclinet.model;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIdentityReference;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -13,18 +15,22 @@ public class InvoiceDetail {
 
     @ManyToOne
     @JoinColumn(name = "invoice_id", nullable = false)
+    @JsonBackReference("invoice-details")  // Thêm annotation này
     private Invoice invoice;
 
     @OneToOne
     @JoinColumn(name = "appointment_id")
+    @JsonIdentityReference(alwaysAsId = true)  // Chỉ sử dụng ID cho appointment
     private Appointment appointment;
 
     @ManyToOne
     @JoinColumn(name = "employee_id")
+    @JsonIdentityReference(alwaysAsId = true)  // Chỉ sử dụng ID cho employee
     private Employee employee;
 
     @ManyToOne
     @JoinColumn(name = "store_service_id")
+    @JsonIdentityReference(alwaysAsId = true)  // Chỉ sử dụng ID cho storeService
     private StoreService storeService;
 
     private String description;

@@ -1,11 +1,11 @@
 package com.example.serversideclinet.model;
 
+import com.fasterxml.jackson.annotation.*;
 import jakarta.persistence.*;
-import org.hibernate.annotations.CreationTimestamp;
-
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
-// WorkingTimeSlot.java
 @Entity
 @Table(name = "WorkingTimeSlot")
 public class WorkingTimeSlot {
@@ -15,10 +15,12 @@ public class WorkingTimeSlot {
 
     @ManyToOne
     @JoinColumn(name = "store_id", nullable = false)
+    @JsonIdentityReference(alwaysAsId = true)
     private Store store;
 
     @ManyToOne
     @JoinColumn(name = "employee_id", nullable = false)
+    @JsonIdentityReference(alwaysAsId = true)
     private Employee employee;
 
     @Column(nullable = false)
@@ -29,8 +31,11 @@ public class WorkingTimeSlot {
 
     private Boolean isAvailable = true;
 
-    // Getters and Setters
+    @OneToMany(mappedBy = "workingSlot", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference("slot-appointments")
+    private List<Appointment> appointments = new ArrayList<>();
 
+    // Getters and Setters
     public Integer getTimeSlotId() {
         return timeSlotId;
     }
@@ -77,5 +82,28 @@ public class WorkingTimeSlot {
 
     public void setIsAvailable(Boolean available) {
         isAvailable = available;
+    }
+
+    public List<Appointment> getAppointments() {
+        return appointments;
+    }
+
+    public void setAppointments(List<Appointment> appointments) {
+        this.appointments = appointments;
+    }
+
+    // Helper methods
+    public void addAppointment(Appointment appointment) {
+        this.appointments.add(appointment);
+        if (appointment.getWorkingSlot() != this) {
+            appointment.setWorkingSlot(this);
+        }
+    }
+
+    public void removeAppointment(Appointment appointment) {
+        this.appointments.remove(appointment);
+        if (appointment.getWorkingSlot() == this) {
+            appointment.setWorkingSlot(null);
+        }
     }
 }
