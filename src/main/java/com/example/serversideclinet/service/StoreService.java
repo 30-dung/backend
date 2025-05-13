@@ -1,5 +1,6 @@
 package com.example.serversideclinet.service;
 
+import com.example.serversideclinet.dto.CityWithCountDTO;
 import com.example.serversideclinet.model.Store;
 import com.example.serversideclinet.repository.StoreRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -42,12 +43,22 @@ public class StoreService {
     }
 
     public List<Store> findStoresByCityOrDistrict(String city, String district) {
-        return storeRepository.findByCityProvinceOrDistrict(city, district);
+        String cityProvince = (city == null || city.trim().isEmpty()) ? null : city;
+        String districtParam = (district == null || district.trim().isEmpty()) ? null : district;
+        return storeRepository.findByCityProvinceAndDistrict(cityProvince, districtParam);
     }
 
     public void deleteStore(int id) {
         Store existingStore = storeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Store not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Store not found bacterwith id: " + id));
         storeRepository.delete(existingStore);
+    }
+
+    public List<CityWithCountDTO> getCitiesWithStoreCount() {
+        return storeRepository.findCitiesWithStoreCount();
+    }
+
+    public List<CityWithCountDTO> getDistrictsWithStoreCountByCity(String cityProvince) {
+        return storeRepository.findDistrictsWithStoreCountByCity(cityProvince);
     }
 }
