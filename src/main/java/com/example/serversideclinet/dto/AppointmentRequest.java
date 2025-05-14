@@ -27,4 +27,20 @@ public class AppointmentRequest {
     public void setStartTime(LocalDateTime startTime) {
         this.startTime = startTime;
     }
+
+    public Integer getTimeSlotId() {
+        return timeSlotId;
+    }
+
+    public Integer getStoreServiceId() {
+        return storeServiceId;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public LocalDateTime getStartTime() {
+        return startTime;
+    }
 }
