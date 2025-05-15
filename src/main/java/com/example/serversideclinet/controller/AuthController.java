@@ -83,6 +83,11 @@
                 return ResponseEntity.badRequest().body(new AuthResponse(null, "Email already exists"));
             }
 
+            // Kiểm tra email đã tồn tại trong Employee repository chưa
+            if (employeeRepository.findByEmail(request.getEmail()).isPresent()) {
+                return ResponseEntity.badRequest().body(new AuthResponse(null, "Email already exists as an employee"));
+            }
+
             User user = new User();
             user.setFullName(request.getFullName());
             user.setEmail(request.getEmail());
