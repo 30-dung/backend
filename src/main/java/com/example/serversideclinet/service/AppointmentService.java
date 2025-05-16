@@ -232,6 +232,36 @@ public class AppointmentService {
             System.err.println("Không thể gửi email thông báo: " + e.getMessage());
         }
     }
+    @Transactional
+    public void handleSuccessfulPayment(int invoiceId) {
+        Invoice invoice = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn."));
+
+        if (invoice.getStatus() == InvoiceStatus.PAID) {
+            return; // Tránh xử lý lại nếu đã thanh toán
+        }
+
+        invoice.setStatus(InvoiceStatus.PAID);
+        invoiceRepository.save(invoice);
+
+        // Cập nhật trạng thái tất cả appointment liên quan
+        List<InvoiceDetail> details = invoiceDetailRepository.findByInvoiceId(invoiceId);
+        for (InvoiceDetail detail : details) {
+            Appointment appointment = detail.getAppointment();
+            if (appointment != null && appointment.getStatus() == Appointment.Status.CONFIRMED) {
+                appointment.setStatus(Appointment.Status.COMPLETED);
+                appointmentRepository.save(appointment);
+
+                // Cộng điểm thưởng cho khách hàng
+                User user = appointment.getUser();
+                if (user != null) {
+                    int currentPoints = user.getLoyaltyPoints() != null ? user.getLoyaltyPoints() : 0;
+                    user.setLoyaltyPoints(currentPoints + 1);
+                    userService.saveUser(user);
+                }
+            }
+        }
+    }
 
     public class AppointmentException extends RuntimeException {
         public AppointmentException(String message) {

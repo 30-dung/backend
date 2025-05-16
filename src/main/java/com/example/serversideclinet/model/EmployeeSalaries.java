@@ -17,10 +17,6 @@ public class EmployeeSalaries {
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
-    @ManyToOne
-    @JoinColumn(name = "rule_id", nullable = false)
-    private SalaryRules salaryRule;
-
     @Column(nullable = false)
     private BigDecimal baseSalary;
 
@@ -38,7 +34,6 @@ public class EmployeeSalaries {
     @CreationTimestamp
     private LocalDateTime calculatedAt;
 
-    // Getters and Setters
     public Integer getSalaryId() {
         return salaryId;
     }
@@ -53,14 +48,6 @@ public class EmployeeSalaries {
 
     public void setEmployee(Employee employee) {
         this.employee = employee;
-    }
-
-    public SalaryRules getSalaryRule() {
-        return salaryRule;
-    }
-
-    public void setSalaryRule(SalaryRules salaryRule) {
-        this.salaryRule = salaryRule;
     }
 
     public BigDecimal getBaseSalary() {
@@ -109,21 +96,5 @@ public class EmployeeSalaries {
 
     public void setCalculatedAt(LocalDateTime calculatedAt) {
         this.calculatedAt = calculatedAt;
-    }
-
-    public void setEmployeeId(Integer employeeId) {
-        if (employeeId != null) {
-            Employee emp = new Employee();
-            emp.setEmployeeId(employeeId);
-            this.employee = emp;
-        }
-    }
-
-    public void setRuleId(Integer ruleId) {
-        if (ruleId != null) {
-            SalaryRules rule = new SalaryRules();
-            rule.setRuleId(ruleId);
-            this.salaryRule = rule;
-        }
     }
 }

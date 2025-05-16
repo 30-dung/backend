@@ -14,8 +14,6 @@ public class User {
     @Column(nullable = false, length = 50)
     private String fullName;
 
-
-
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
@@ -28,14 +26,11 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private MembershipType membershipType = MembershipType.REGULAR;
-
-
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "users_roles",
             joinColumns = @JoinColumn(name = "userId"),
             inverseJoinColumns = @JoinColumn(name = "roleId"))
     private Set<Role> roles;
-
 
     @Column(nullable = false, columnDefinition = "INT default 0")
     private Integer loyaltyPoints = 0;
