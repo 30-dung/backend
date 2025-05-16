@@ -1,7 +1,5 @@
 package com.example.serversideclinet.model;
 
-
-
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -11,7 +9,7 @@ import java.time.YearMonth;
 
 @Entity
 @Table(name = "employee_performance_points",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"employee_id", "year_month"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"employee_id", "yearMonthStr"}))
 public class EmployeePerformancePoints {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,7 +22,7 @@ public class EmployeePerformancePoints {
     @Column(name = "total_points", nullable = false)
     private Integer totalPoints = 0;
 
-    @Column(name = "year_month", nullable = false)
+    @Column(name = "yearMonthStr", nullable = false)
     private String yearMonth; // Format: YYYY-MM
 
     @Column(name = "is_processed", nullable = false)

@@ -1,9 +1,12 @@
 package com.example.serversideclinet.service;
 
 import com.example.serversideclinet.model.*;
+import com.example.serversideclinet.repository.AppointmentRepository;
 import com.example.serversideclinet.repository.CustomerSatisfactionRepository;
 import com.example.serversideclinet.repository.EmployeePerformancePointsRepository;
+import com.example.serversideclinet.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,7 +19,13 @@ public class CustomerSatisfactionService {
     private CustomerSatisfactionRepository customerSatisfactionRepository;
 
     @Autowired
+    private AppointmentRepository appointmentRepository;
+
+    @Autowired
     private EmployeePerformancePointsRepository employeePerformancePointsRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     /**
      * Lưu đánh giá của khách hàng và cập nhật điểm thưởng cho nhân viên
@@ -26,17 +35,30 @@ public class CustomerSatisfactionService {
      */
     @Transactional
     public CustomerSatisfaction saveCustomerSatisfaction(CustomerSatisfaction customerSatisfaction) {
-        // Đảm bảo thời gian tạo là thời gian hiện tại
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+
+        customerSatisfaction.setUser(user);
         customerSatisfaction.setCreatedAt(LocalDateTime.now());
 
-        // Lưu thông tin đánh giá
+        // Load lại appointment đầy đủ để đảm bảo employee không null
+        Appointment appointment = appointmentRepository.findById(customerSatisfaction.getAppointment().getAppointmentId())
+                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+
+        customerSatisfaction.setAppointment(appointment);
+
         CustomerSatisfaction savedSatisfaction = customerSatisfactionRepository.save(customerSatisfaction);
 
-        // Cập nhật điểm thưởng cho nhân viên dựa trên đánh giá
         updateEmployeePerformancePoints(savedSatisfaction);
+
+        appointment.setReminderSent(true);
+        appointmentRepository.save(appointment);
 
         return savedSatisfaction;
     }
+
 
     /**
      * Cập nhật điểm thưởng cho nhân viên dựa trên đánh giá của khách hàng
@@ -77,16 +99,13 @@ public class CustomerSatisfactionService {
      * @return số điểm thưởng
      */
     private Integer calculatePointsFromRating(Integer rating) {
-        // Quy tắc tính điểm:
-        // 4 sao: +5 điểm
-        // 5 sao: +10 điểm
         switch (rating) {
             case 5:
                 return 10;
             case 4:
                 return 5;
             default:
-                return 0; // Không có điểm thưởng cho đánh giá dưới 4 sao
+                return 0;
         }
     }
 }
