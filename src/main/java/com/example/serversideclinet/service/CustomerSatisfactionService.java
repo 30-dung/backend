@@ -28,75 +28,95 @@ public class CustomerSatisfactionService {
     private UserRepository userRepository;
 
     /**
-     * Lưu đánh giá của khách hàng và cập nhật điểm thưởng cho nhân viên
-     *
-     * @param customerSatisfaction thông tin đánh giá của khách hàng
-     * @return đánh giá đã được lưu
+     * Xử lý đánh giá nhận được từ controller
      */
     @Transactional
-    public CustomerSatisfaction saveCustomerSatisfaction(CustomerSatisfaction customerSatisfaction) {
+    public CustomerSatisfaction processRating(Integer appointmentId, Integer rating, String feedback) {
+        if (appointmentId == null) {
+            throw new IllegalArgumentException("Appointment ID must not be null");
+        }
+
+        if (rating == null || rating < 1 || rating > 5) {
+            throw new IllegalArgumentException("Rating must be between 1 and 5");
+        }
+
+        // Lấy email của người dùng từ JWT
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
 
-        customerSatisfaction.setUser(user);
-        customerSatisfaction.setCreatedAt(LocalDateTime.now());
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new RuntimeException("Appointment not found with ID: " + appointmentId));
 
-        // Load lại appointment đầy đủ để đảm bảo employee không null
-        Appointment appointment = appointmentRepository.findById(customerSatisfaction.getAppointment().getAppointmentId())
-                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+        // Kiểm tra quyền sở hữu
+        if (!appointment.getUser().getUserId().equals(user.getUserId())) {
+            throw new RuntimeException("Appointment does not belong to the current user");
+        }
 
-        customerSatisfaction.setAppointment(appointment);
+        // Kiểm tra appointment đã hoàn thành chưa
+        if (appointment.getStatus() != Appointment.Status.COMPLETED) {
+            throw new RuntimeException("Only completed appointments can be rated");
+        }
 
-        CustomerSatisfaction savedSatisfaction = customerSatisfactionRepository.save(customerSatisfaction);
 
+        // Kiểm tra đã đánh giá chưa
+        if (customerSatisfactionRepository.existsByAppointment(appointment)) {
+            throw new RuntimeException("This appointment has already been rated");
+        }
+
+        // Kiểm tra thông tin nhân viên có tồn tại
+        if (appointment.getEmployee() == null) {
+            throw new RuntimeException("Cannot rate appointment without assigned employee");
+        }
+
+        // Tạo và lưu CustomerSatisfaction
+        CustomerSatisfaction satisfaction = new CustomerSatisfaction();
+        satisfaction.setRating(rating);
+        satisfaction.setFeedback(feedback);
+        satisfaction.setAppointment(appointment);
+        satisfaction.setUser(user);
+        satisfaction.setCreatedAt(LocalDateTime.now());
+
+        CustomerSatisfaction savedSatisfaction = customerSatisfactionRepository.save(satisfaction);
+
+        // Cập nhật điểm thưởng
         updateEmployeePerformancePoints(savedSatisfaction);
 
+        // Đánh dấu đã nhắc nhở để không gửi lại
         appointment.setReminderSent(true);
         appointmentRepository.save(appointment);
 
         return savedSatisfaction;
     }
 
-
     /**
-     * Cập nhật điểm thưởng cho nhân viên dựa trên đánh giá của khách hàng
-     *
-     * @param satisfaction đánh giá của khách hàng
+     * Cập nhật điểm thưởng cho nhân viên dựa trên đánh giá
      */
     private void updateEmployeePerformancePoints(CustomerSatisfaction satisfaction) {
-        // Lấy thông tin nhân viên từ cuộc hẹn
         Employee employee = satisfaction.getAppointment().getEmployee();
 
-        // Lấy thông tin đánh giá
-        Integer rating = satisfaction.getRating();
+        if (employee == null) {
+            throw new RuntimeException("Employee information missing from appointment");
+        }
 
-        // Tính điểm thưởng dựa trên đánh giá
+        Integer rating = satisfaction.getRating();
         Integer points = calculatePointsFromRating(rating);
 
         if (points > 0) {
-            // Lấy tháng hiện tại để lưu điểm thưởng
             String currentYearMonth = EmployeePerformancePoints.getCurrentYearMonthString();
 
-            // Tìm hoặc tạo mới bản ghi điểm thưởng cho nhân viên trong tháng này
             EmployeePerformancePoints performancePoints =
                     employeePerformancePointsRepository.findByEmployeeAndYearMonth(employee, currentYearMonth)
                             .orElseGet(() -> new EmployeePerformancePoints(employee, currentYearMonth));
 
-            // Cộng điểm thưởng
             performancePoints.addPoints(points);
-
-            // Lưu vào cơ sở dữ liệu
             employeePerformancePointsRepository.save(performancePoints);
         }
     }
 
     /**
-     * Tính điểm thưởng dựa trên đánh giá
-     *
-     * @param rating đánh giá (1-5 sao)
-     * @return số điểm thưởng
+     * Tính điểm thưởng dựa trên rating
      */
     private Integer calculatePointsFromRating(Integer rating) {
         switch (rating) {

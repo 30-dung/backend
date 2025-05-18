@@ -14,8 +14,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -81,4 +83,24 @@ public class EmployeeService {
 
         return employeeRepository.save(employee);
     }
+    /**
+     * Lấy tất cả nhân viên từ hệ thống
+     *
+     * @return Danh sách tất cả nhân viên
+     */
+    public List<Employee> getAllEmployees() {
+        return employeeRepository.findAll();
+    }
+
+    /**
+     * Tìm nhân viên theo ID
+     *
+     * @param id ID của nhân viên cần tìm
+     * @return Optional chứa thông tin nhân viên nếu tìm thấy
+     */
+    public Optional<Employee> findEmployeeById(Integer id) {
+        return employeeRepository.findById(id);
+    }
+
+
 }

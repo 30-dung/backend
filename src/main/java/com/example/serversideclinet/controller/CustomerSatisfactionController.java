@@ -1,7 +1,7 @@
 package com.example.serversideclinet.controller;
 
-
-import com.example.serversideclinet.model.CustomerSatisfaction;
+import com.example.serversideclinet.model.*;
+import com.example.serversideclinet.dto.RatingRequest;
 import com.example.serversideclinet.service.CustomerSatisfactionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -15,18 +15,22 @@ public class CustomerSatisfactionController {
     private CustomerSatisfactionService customerSatisfactionService;
 
     /**
-     * API để gửi đánh giá của khách hàng
-     *
-     * @param customerSatisfaction đánh giá từ phía client
-     * @return đánh giá đã lưu
+     * Endpoint to submit customer satisfaction rating
+     * Uses path variable for appointment ID instead of request body
      */
-    @PostMapping
-    public ResponseEntity<?> createCustomerSatisfaction(@RequestBody CustomerSatisfaction customerSatisfaction) {
-        try {
-            CustomerSatisfaction saved = customerSatisfactionService.saveCustomerSatisfaction(customerSatisfaction);
-            return ResponseEntity.ok(saved);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Lỗi khi lưu đánh giá: " + e.getMessage());
-        }
+    @PostMapping("/{appointmentId}")
+    public ResponseEntity<CustomerSatisfaction> submitRating(
+            @PathVariable Integer appointmentId,
+            @RequestBody RatingRequest ratingRequest) {
+
+        // Call service to process the rating submission
+        CustomerSatisfaction savedSatisfaction = customerSatisfactionService.processRating(
+                appointmentId,
+                ratingRequest.getRating(),
+                ratingRequest.getFeedback()
+        );
+
+        // Return the saved satisfaction data
+        return ResponseEntity.ok(savedSatisfaction);
     }
 }

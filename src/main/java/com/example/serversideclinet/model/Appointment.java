@@ -47,6 +47,13 @@ public class Appointment {
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    public Appointment(Integer appointmentId) {
+    }
+
+    public Appointment() {
+
+    }
+
     public enum Status {
         PENDING, CONFIRMED, COMPLETED, CANCELED
     }
