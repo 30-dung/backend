@@ -1,7 +1,9 @@
 package com.example.serversideclinet.controller;
 
+import com.example.serversideclinet.model.Employee;
 import com.example.serversideclinet.model.EmployeePerformancePoints;
 import com.example.serversideclinet.model.EmployeeSalaries;
+import com.example.serversideclinet.repository.EmployeeRepository;
 import com.example.serversideclinet.service.SalaryCalculationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -11,65 +13,92 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.YearMonth;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/salaries")
 public class SalaryController {
 
+
     @Autowired
     private SalaryCalculationService salaryCalculationService;
 
+    @Autowired
+    private EmployeeRepository employeeRepository;
+
     /**
-     * Tính toán lương cho tất cả nhân viên trong tháng hiện tại
-     *
-     * @return Danh sách thông tin lương đã được tính toán
+     * API endpoint cho Admin để tính lương nhân viên ngày hiện tại
      */
-    @PostMapping("/calculate-current-month")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
-    public ResponseEntity<String> calculateSalariesForCurrentMonth() {
-        String currentYearMonth = EmployeePerformancePoints.getCurrentYearMonthString();
-        try {
-            salaryCalculationService.calculateSalariesForAllEmployees(currentYearMonth);
-            return ResponseEntity.ok("Đã tính toán lương thành công cho tháng " + currentYearMonth);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Lỗi khi tính toán lương: " + e.getMessage());
-        }
+    @PostMapping("/calculate-daily")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> calculateDailySalaries() {
+        List<EmployeeSalaries> salaries = salaryCalculationService.calculateDailySalariesForAllEmployees();
+
+        List<SalaryResponse> response = salaries.stream()
+                .map(salary -> new SalaryResponse(
+                        salary.getEmployee().getEmployeeId(),
+                        salary.getEmployee().getFullName(),
+                        salary.getBaseSalary(),
+                        salary.getBonus(),
+                        salary.getTotalSalary()
+                ))
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
     }
 
     /**
-     * Tính toán lương cho tất cả nhân viên trong một tháng cụ thể
-     *
-     * @param yearMonth Tháng cần tính lương (định dạng YYYY-MM)
-     * @return Danh sách thông tin lương đã được tính toán
+     * API endpoint để Admin lấy thông tin lương của nhân viên trong ngày hiện tại
      */
-    @PostMapping("/calculate/{yearMonth}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
-    public ResponseEntity<String> calculateSalariesForMonth(@PathVariable @DateTimeFormat(pattern = "yyyy-MM") String yearMonth) {
-        try {
-            // Xác thực định dạng yearMonth
-            YearMonth.parse(yearMonth);
+    @GetMapping("/employee/{employeeId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getEmployeeDailySalary(@PathVariable Integer employeeId) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("Employee not found with ID: " + employeeId));
 
-            salaryCalculationService.calculateSalariesForAllEmployees(yearMonth);
-            return ResponseEntity.ok("Đã tính toán lương thành công cho tháng " + yearMonth);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Lỗi khi tính toán lương: " + e.getMessage());
+        EmployeeSalaries salary = salaryCalculationService.getEmployeeDailySalary(employee);
+
+        if (salary == null) {
+            return ResponseEntity.notFound().build();
         }
+
+        SalaryResponse response = new SalaryResponse(
+                ((Employee) employee).getEmployeeId(),
+                employee.getFullName(),
+                salary.getBaseSalary(),
+                salary.getBonus(),
+                salary.getTotalSalary()
+        );
+
+        return ResponseEntity.ok(response);
     }
 
     /**
-     * Lấy thông tin lương của một nhân viên trong một tháng cụ thể
-     *
-     * @param employeeId ID của nhân viên
-     * @param yearMonth Tháng (định dạng YYYY-MM)
-     * @return Thông tin lương
+     * Class để trả về dữ liệu lương
      */
-    @GetMapping("/employee/{employeeId}/{yearMonth}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or @securityService.isCurrentEmployee(#employeeId)")
-    public ResponseEntity<?> getEmployeeSalary(
-            @PathVariable Integer employeeId,
-            @PathVariable @DateTimeFormat(pattern = "yyyy-MM") String yearMonth) {
+    static class SalaryResponse {
+        private Integer employeeId;
+        private String employeeName;
+        private java.math.BigDecimal dailyBaseSalary;
+        private java.math.BigDecimal performanceBonus;
+        private java.math.BigDecimal totalDailySalary;
 
-        // Sẽ triển khai sau khi có repository method phù hợp
-        return ResponseEntity.ok().build();
+        public SalaryResponse(Integer employeeId, String employeeName,
+                              java.math.BigDecimal dailyBaseSalary,
+                              java.math.BigDecimal performanceBonus,
+                              java.math.BigDecimal totalDailySalary) {
+            this.employeeId = employeeId;
+            this.employeeName = employeeName;
+            this.dailyBaseSalary = dailyBaseSalary;
+            this.performanceBonus = performanceBonus;
+            this.totalDailySalary = totalDailySalary;
+        }
+
+        // Getters
+        public Integer getEmployeeId() { return employeeId; }
+        public String getEmployeeName() { return employeeName; }
+        public java.math.BigDecimal getDailyBaseSalary() { return dailyBaseSalary; }
+        public java.math.BigDecimal getPerformanceBonus() { return performanceBonus; }
+        public java.math.BigDecimal getTotalDailySalary() { return totalDailySalary; }
     }
 }

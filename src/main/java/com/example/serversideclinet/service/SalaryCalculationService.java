@@ -4,13 +4,17 @@ import com.example.serversideclinet.model.*;
 import com.example.serversideclinet.repository.EmployeePerformancePointsRepository;
 import com.example.serversideclinet.repository.EmployeeSalariesRepository;
 import com.example.serversideclinet.repository.PerformanceBonusConfigRepository;
+import com.example.serversideclinet.repository.EmployeeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -25,94 +29,99 @@ public class SalaryCalculationService {
     @Autowired
     private PerformanceBonusConfigRepository bonusConfigRepository;
 
+    @Autowired
+    private EmployeeRepository employeeRepository;
+
+    private static final BigDecimal POINT_VALUE = new BigDecimal("1000"); // 1 điểm = 1000 VND
+
     /**
-     * Tính toán lương cho nhân viên vào cuối tháng
+     * Tính toán lương cho nhân viên cho ngày hiện tại
      *
      * @param employee Nhân viên cần tính lương
-     * @param yearMonth Tháng cần tính lương (định dạng YYYY-MM)
      * @param baseSalary Lương cơ bản của nhân viên
      * @return Thông tin lương đã được tính toán
      */
     @Transactional
-    public EmployeeSalaries calculateSalary(Employee employee, String yearMonth, BigDecimal baseSalary) {
-        // Tìm thông tin điểm thưởng của nhân viên trong tháng
+    public EmployeeSalaries calculateDailySalary(Employee employee, BigDecimal baseSalary) {
+        // Lấy ngày hiện tại
+        LocalDate today = LocalDate.now();
+        String yearMonth = today.getYear() + "-" + String.format("%02d", today.getMonthValue());
+
+        // Tìm thông tin điểm thưởng của nhân viên trong tháng hiện tại
         EmployeePerformancePoints performancePoints = performancePointsRepository
                 .findByEmployeeAndYearMonth(employee, yearMonth)
                 .orElseGet(() -> new EmployeePerformancePoints(employee, yearMonth));
 
-        // Tính toán tiền thưởng dựa trên điểm
-        BigDecimal bonus = calculateBonusFromPoints(baseSalary, performancePoints.getTotalPoints());
+        // Lương cơ bản hàng ngày = lương cơ bản / 30
+        BigDecimal dailyBaseSalary = baseSalary.divide(BigDecimal.valueOf(30), 2, RoundingMode.HALF_UP);
 
-        // Tổng lương = lương cơ bản + tiền thưởng
-        BigDecimal totalSalary = baseSalary.add(bonus);
+        // Tính toán tiền thưởng dựa trên điểm (1 điểm = 1000 VND)
+        BigDecimal bonus = new BigDecimal(performancePoints.getTotalPoints()).multiply(POINT_VALUE);
+
+        // Tổng lương = lương cơ bản hàng ngày + tiền thưởng
+        BigDecimal totalSalary = dailyBaseSalary.add(bonus);
 
         // Tạo bản ghi lương mới
         EmployeeSalaries salary = new EmployeeSalaries();
         salary.setEmployee(employee);
-        salary.setBaseSalary(baseSalary);
+        salary.setBaseSalary(dailyBaseSalary);
         salary.setBonus(bonus);
         salary.setTotalSalary(totalSalary);
 
-        // Parse yearMonth thành thông tin tháng và năm
+        // Lưu thông tin ngày tháng hiện tại
         YearMonth ym = YearMonth.parse(yearMonth);
         salary.setSalaryMonth(ym.getMonthValue());
         salary.setSalaryPeriod(ym.getYear());
-
         salary.setCalculatedAt(LocalDateTime.now());
 
         // Lưu thông tin lương
-        EmployeeSalaries savedSalary = employeeSalariesRepository.save(salary);
-
-        // Đánh dấu điểm thưởng đã được xử lý
-        performancePoints.setIsProcessed(true);
-        performancePointsRepository.save(performancePoints);
-
-        return savedSalary;
+        return employeeSalariesRepository.save(salary);
     }
 
     /**
-     * Tính toán tiền thưởng dựa trên số điểm và lương cơ bản
+     * Tính toán lương cho tất cả nhân viên cho ngày hiện tại
+     * Phương thức này được gọi bởi Admin
      *
-     * @param baseSalary Lương cơ bản
-     * @param points Số điểm tích lũy
-     * @return Số tiền thưởng
-     */
-    private BigDecimal calculateBonusFromPoints(BigDecimal baseSalary, Integer points) {
-        // Lấy các cấu hình tiền thưởng từ cơ sở dữ liệu (sắp xếp theo ngưỡng điểm giảm dần)
-        List<PerformanceBonusConfig> bonusConfigs = bonusConfigRepository.findAllByOrderByPointsThresholdDesc();
-
-        // Nếu không có cấu hình, sử dụng cấu hình mặc định
-        if (bonusConfigs.isEmpty()) {
-            // Mặc định: 100 điểm = 1,000,000 VND (cố định)
-            if (points >= 100) {
-                return new BigDecimal("1000000");
-            } else {
-                // Tính theo tỷ lệ nếu dưới 100 điểm
-                return new BigDecimal(points * 10000); // 10,000 VND mỗi điểm
-            }
-        }
-
-        // Duyệt qua các cấu hình để tìm mức thưởng phù hợp
-        for (PerformanceBonusConfig config : bonusConfigs) {
-            if (points >= config.getPointsThreshold()) {
-                return config.calculateBonus(baseSalary, points);
-            }
-        }
-
-        // Không đạt ngưỡng điểm nào
-        return BigDecimal.ZERO;
-    }
-
-    /**
-     * Tính toán lương cho tất cả nhân viên vào cuối tháng
-     *
-     * @param yearMonth Tháng cần tính lương (định dạng YYYY-MM)
      * @return Danh sách thông tin lương đã được tính toán
      */
     @Transactional
-    public List<EmployeeSalaries> calculateSalariesForAllEmployees(String yearMonth) {
-        // Sẽ triển khai sau khi có phương thức để lấy tất cả nhân viên
-        // và lương cơ bản của họ
-        throw new UnsupportedOperationException("Method not implemented yet");
+    public List<EmployeeSalaries> calculateDailySalariesForAllEmployees() {
+        List<Employee> allEmployees = employeeRepository.findAll();
+        List<EmployeeSalaries> result = new ArrayList<>();
+
+        for (Employee employee : allEmployees) {
+            // Giả sử có phương thức để lấy lương cơ bản của nhân viên
+            BigDecimal baseSalary = getEmployeeBaseSalary(employee);
+
+            EmployeeSalaries salary = calculateDailySalary(employee, baseSalary);
+            result.add(salary);
+        }
+
+        return result;
+    }
+
+    /**
+     * Phương thức lấy lương cơ bản của nhân viên
+     * Cần triển khai dựa trên cấu trúc dữ liệu của bạn
+     */
+    private BigDecimal getEmployeeBaseSalary(Employee employee) {
+        // Thay thế bằng logic lấy lương cơ bản của nhân viên từ cơ sở dữ liệu
+        // Ví dụ: return employee.getBaseSalary();
+
+        // Tạm thời trả về 9,000,000 VND cho ví dụ
+        return new BigDecimal("9000000");
+    }
+
+    /**
+     * Lấy thông tin lương của nhân viên cho ngày hiện tại
+     */
+    public EmployeeSalaries getEmployeeDailySalary(Employee employee) {
+        LocalDate today = LocalDate.now();
+        // Lấy thông tin lương gần nhất được tính trong ngày hôm nay
+        return employeeSalariesRepository.findTopByEmployeeAndCalculatedAtBetweenOrderByCalculatedAtDesc(
+                employee,
+                today.atStartOfDay(),
+                today.plusDays(1).atStartOfDay()
+        ).orElse(null);
     }
 }

@@ -23,13 +23,13 @@ public class SalarySchedulerConfig {
      * Lịch trình tự động tính toán lương vào cuối tháng
      * Chạy vào 23:59:59 của ngày cuối cùng mỗi tháng
      */
-    @Scheduled(cron = "59 59 23 L * ?") // L = ngày cuối cùng của tháng
+    @Scheduled(cron = "59 59 23 L * ?") // L = ngày cuối cùng của ngày
     public void calculateSalariesAtEndOfMonth() {
         String currentYearMonth = EmployeePerformancePoints.getCurrentYearMonthString();
         logger.info("Bắt đầu tính toán lương tự động cho tháng {}", currentYearMonth);
 
         try {
-            salaryCalculationService.calculateSalariesForAllEmployees(currentYearMonth);
+            salaryCalculationService.calculateDailySalariesForAllEmployees();
             logger.info("Hoàn thành tính toán lương tự động cho tháng {}", currentYearMonth);
         } catch (Exception e) {
             logger.error("Lỗi khi tính toán lương tự động: {}", e.getMessage());
