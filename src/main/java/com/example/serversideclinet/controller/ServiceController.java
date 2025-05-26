@@ -7,26 +7,30 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
 @RestController
-@RequestMapping("/admin/services")
-@PreAuthorize("hasRole('ADMIN')")
+@RequestMapping("api/services")
 public class ServiceController {
 
     @Autowired
     private ServiceService serviceService;
 
+    // Admin mới được phép tạo service
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<?> createService(@RequestBody ServiceRequest request) {
         ServiceEntity service = serviceService.create(request);
         return ResponseEntity.ok(service);
     }
 
+    // Cả admin và customer đều có thể lấy danh sách dịch vụ
+    @PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
     @GetMapping
     public ResponseEntity<?> getAllServices() {
         return ResponseEntity.ok(serviceService.getAll());
     }
 
+    // Cả admin và customer đều có thể lấy service theo id
+    @PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
     @GetMapping("/{id}")
     public ResponseEntity<?> getServiceById(@PathVariable Integer id) {
         return serviceService.getById(id)
@@ -34,6 +38,8 @@ public class ServiceController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // Chỉ admin mới được cập nhật dịch vụ
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<?> updateService(@PathVariable Integer id, @RequestBody ServiceRequest request) {
         return serviceService.update(id, request)
@@ -41,6 +47,8 @@ public class ServiceController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // Chỉ admin mới được xóa dịch vụ
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteService(@PathVariable Integer id) {
         if (serviceService.delete(id)) {
@@ -49,4 +57,3 @@ public class ServiceController {
         return ResponseEntity.notFound().build();
     }
 }
-

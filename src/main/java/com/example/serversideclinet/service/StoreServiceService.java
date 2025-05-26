@@ -27,7 +27,6 @@ public class StoreServiceService {
     @Autowired
     private ServiceRepository serviceRepository;
 
-
     @Autowired
     private StoreServicePriceHistoryRepository StoreServicePriceHistoryRepository;
 

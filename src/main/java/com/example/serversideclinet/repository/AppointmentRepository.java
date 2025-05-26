@@ -15,8 +15,5 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
     List<Appointment> findByEmployeeAndStartTimeBetween(
             Employee employee, LocalDateTime startTime, LocalDateTime endTime);
 
-    // Additional useful queries
     List<Appointment> findByEmployeeAndStatus(Employee employee, Appointment.Status status);
-
-    List<Appointment> findByUserEmail(String email);
 }
