@@ -33,6 +33,7 @@ public class StoreService {
             store.setStoreName(updatedStore.getStoreName());
             store.setPhoneNumber(updatedStore.getPhoneNumber());
             store.setCityProvince(updatedStore.getCityProvince());
+            store.setStoreImages(updatedStore.getStoreImages());
             store.setDistrict(updatedStore.getDistrict());
             store.setOpeningTime(updatedStore.getOpeningTime());
             store.setClosingTime(updatedStore.getClosingTime());

@@ -19,7 +19,8 @@ public class Store {
 
     @Column(nullable = false)
     private String storeName;
-
+@Column(nullable = false)
+private String storeImages;
     @Column(nullable = false)
     private String phoneNumber;
 
@@ -113,5 +114,13 @@ public class Store {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getStoreImages() {
+        return storeImages;
+    }
+
+    public void setStoreImages(String storeImages) {
+        this.storeImages = storeImages;
     }
 }
