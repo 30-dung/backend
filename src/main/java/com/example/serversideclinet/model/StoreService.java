@@ -5,7 +5,6 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.util.Objects;
 
-// StoreService.java
 @Entity
 @Table(name = "StoreService",
         uniqueConstraints = @UniqueConstraint(columnNames = {"store_id", "service_id"}))
@@ -15,11 +14,11 @@ public class StoreService {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer storeServiceId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "store_id", nullable = false)
     private Store store;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "service_id", nullable = false)
     private ServiceEntity service;
 
@@ -84,6 +83,4 @@ public class StoreService {
                 ", price=" + price +
                 '}';
     }
-
-
 }

@@ -62,4 +62,13 @@ public class StoreController {
         List<CityWithCountDTO> districts = storeService.getDistrictsWithStoreCountByCity(cityProvince);
         return ResponseEntity.ok(districts);
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Store> getStoreById(@PathVariable Integer id) {
+        Store store = storeService.getStoreById(id);
+        if (store == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(store);
+    }
 }

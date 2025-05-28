@@ -12,8 +12,9 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 
 @RestController
-@RequestMapping("/admin/create/price/store")
-@PreAuthorize("hasRole('ADMIN')")
+@CrossOrigin
+@RequestMapping("/api/admin/create/price/store")
+//@PreAuthorize("hasRole('ADMIN')")
 public class StoreServiceController {
 
     @Autowired

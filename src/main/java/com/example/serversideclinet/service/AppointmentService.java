@@ -2,15 +2,14 @@ package com.example.serversideclinet.service;
 
 import com.example.serversideclinet.dto.AppointmentRequest;
 import com.example.serversideclinet.model.*;
-import com.example.serversideclinet.model.StoreService;
 import com.example.serversideclinet.repository.*;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -18,17 +17,22 @@ import java.util.List;
 @Service
 public class AppointmentService {
 
+    private static final Logger logger = LoggerFactory.getLogger(AppointmentService.class);
+
     @Autowired
     private AppointmentRepository appointmentRepository;
 
     @Autowired
-    private WorkingTimeSlotRepository workingTimeSlotRepository;
+    private UserRepository userRepository;
 
     @Autowired
     private StoreServiceRepository storeServiceRepository;
 
     @Autowired
-    private UserService userService;
+    private WorkingTimeSlotRepository workingTimeSlotRepository;
+
+    @Autowired
+    private EmployeeRepository employeeRepository;
 
     @Autowired
     private InvoiceRepository invoiceRepository;
@@ -37,108 +41,109 @@ public class AppointmentService {
     private InvoiceDetailRepository invoiceDetailRepository;
 
     @Autowired
-    private JavaMailSender emailSender;
+    private JavaMailSender mailSender;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private EmailService emailService;
+
 
     @Transactional
     public Appointment createAppointment(AppointmentRequest request, String userEmail) {
-        if (request.getTimeSlotId() == null) {
-            throw new AppointmentException("Time slot ID không được để trống.");
+        // Fetch user by email
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + userEmail));
+
+        // Fetch working time slot
+        WorkingTimeSlot workingSlot = workingTimeSlotRepository.findById(request.getTimeSlotId())
+                .orElseThrow(() -> new IllegalArgumentException("Working time slot not found: " + request.getTimeSlotId()));
+
+        // Fetch store service
+        com.example.serversideclinet.model.StoreService storeService = storeServiceRepository.findById(request.getStoreServiceId())
+                .orElseThrow(() -> new IllegalArgumentException("Store service not found: " + request.getStoreServiceId()));
+
+        // Validate time slot availability
+        LocalDateTime startTime = request.getStartTime();
+        LocalDateTime endTime = request.getEndTime();
+        if (startTime.isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Cannot book a time slot in the past");
         }
 
-        if (request.getStoreServiceId() == null) {
-            throw new AppointmentException("StoreService ID không được để trống.");
+        // Check for overlapping appointments
+        Employee employee = workingSlot.getEmployee();
+        List<Appointment> overlappingAppointments = appointmentRepository.findByEmployeeAndStartTimeBetween(
+                employee, startTime, endTime);
+        if (!overlappingAppointments.isEmpty()) {
+            throw new IllegalArgumentException("Time slot is already booked");
         }
 
-        // Lấy user
-        User user = userService.findByEmail(userEmail)
-                .orElseThrow(() -> new AppointmentException("Không tìm thấy người dùng."));
-
-        // Lấy time slot
-        WorkingTimeSlot timeSlot = workingTimeSlotRepository.findById(request.getTimeSlotId())
-                .orElseThrow(() -> new AppointmentException("Không tìm thấy khung giờ làm việc."));
-
-        if (!timeSlot.getIsAvailable()) {
-            throw new AppointmentException("Khung giờ không có sẵn.");
-        }
-
-        // Lấy employee và store service
-        Employee employee = timeSlot.getEmployee();
-        StoreService storeService = storeServiceRepository.findById(request.getStoreServiceId())
-                .orElseThrow(() -> new AppointmentException("Không tìm thấy dịch vụ."));
-
-        // Tính thời gian bắt đầu và kết thúc dịch vụ
-        Short serviceDuration = storeService.getService().getDurationMinutes();
-        LocalDateTime startTime = request.getStartTime() != null ?
-                request.getStartTime() :
-                timeSlot.getStartTime();
-        LocalDateTime endTime = startTime.plusMinutes(serviceDuration);
-
-        // Kiểm tra thời gian hợp lệ
-        if (startTime.isBefore(timeSlot.getStartTime()) || endTime.isAfter(timeSlot.getEndTime())) {
-            throw new AppointmentException("Thời gian đặt lịch nằm ngoài khung giờ làm việc.");
-        }
-
-        // Kiểm tra xem thời gian này đã được đặt chưa
-        boolean isTimeAvailable = checkTimeAvailability(employee, startTime, endTime);
-        if (!isTimeAvailable) {
-            throw new AppointmentException("Thời gian này đã được đặt, vui lòng chọn thời gian khác.");
-        }
-
-        // Tạo appointment
+        // Create appointment
         Appointment appointment = new Appointment();
         appointment.setUser(user);
-        appointment.setStoreService(storeService);
+        appointment.setWorkingSlot(workingSlot);
         appointment.setEmployee(employee);
-        appointment.setWorkingSlot(timeSlot);
+        appointment.setStoreService(storeService);
         appointment.setStartTime(startTime);
         appointment.setEndTime(endTime);
-        appointment.setStatus(Appointment.Status.PENDING);
         appointment.setNotes(request.getNotes());
+        appointment.setStatus(Appointment.Status.PENDING);
+        appointment.setCreatedAt(LocalDateTime.now());
+        appointment.setReminderSent(false);
 
-        // Lưu appointment trước
-        appointment = appointmentRepository.save(appointment);
+        // Save appointment
+        Appointment savedAppointment = appointmentRepository.save(appointment);
 
-        // Thêm appointment vào working slot và cập nhật trạng thái
-        // Không lưu trực tiếp qua timeSlot để tránh vòng lặp
-        timeSlot.getAppointments().add(appointment);
-        updateTimeSlotAvailability(timeSlot);
-        workingTimeSlotRepository.save(timeSlot);
+        // Create invoice
+        Invoice invoice = new Invoice();
+        invoice.setUser(user);
+        invoice.setTotalAmount(storeService.getPrice());
+        invoice.setStatus(Invoice.InvoiceStatus.PENDING);
+        invoice.setCreatedAt(LocalDateTime.now());
+        invoice.getAppointments().add(savedAppointment);
+        Invoice savedInvoice = invoiceRepository.save(invoice);
 
-        // Tạo hóa đơn nếu chưa có
-        Invoice invoice = invoiceRepository
-                .findFirstByUserAndStatus(user, InvoiceStatus.PENDING)
-                .orElseGet(() -> {
-                    Invoice newInvoice = new Invoice();
-                    newInvoice.setUser(user);
-                    newInvoice.setStatus(InvoiceStatus.PENDING);
-                    newInvoice.setCreatedAt(LocalDateTime.now());
-                    newInvoice.setTotalAmount(BigDecimal.ZERO); // Khởi tạo với 0
-                    return invoiceRepository.save(newInvoice);
-                });
+        // Thiết lập mối quan hệ ngược
+        savedAppointment.setInvoice(savedInvoice);
+        appointmentRepository.save(savedAppointment);
 
-        // Tạo và lưu chi tiết hóa đơn
+        // Tạo InvoiceDetail
         InvoiceDetail invoiceDetail = new InvoiceDetail();
-        invoiceDetail.setInvoice(invoice);
-        invoiceDetail.setAppointment(appointment);
-        invoiceDetail.setEmployee(employee);
-        invoiceDetail.setStoreService(storeService);
+        invoiceDetail.setInvoice(savedInvoice);
+        invoiceDetail.setAppointment(savedAppointment);
         invoiceDetail.setUnitPrice(storeService.getPrice());
-        invoiceDetail.setQuantity(1);
-        invoiceDetail.setDescription(storeService.getService().getServiceName());
+        // Gán giá trị từ Appointment nếu cần
+        if (savedAppointment.getEmployee() != null) {
+            invoiceDetail.setEmployeeId(savedAppointment.getEmployee().getEmployeeId());
+        }
+        if (savedAppointment.getStoreService() != null) {
+            invoiceDetail.setStoreServiceId(savedAppointment.getStoreService().getStoreServiceId());
+        }
         invoiceDetailRepository.save(invoiceDetail);
 
-        // Cập nhật tổng tiền hóa đơn
-        BigDecimal totalAmount = BigDecimal.ZERO;
-        for (InvoiceDetail detail : invoiceDetailRepository.findByInvoiceId(invoice.getInvoiceId())) {
-            totalAmount = totalAmount.add(detail.getUnitPrice().multiply(new BigDecimal(detail.getQuantity())));
+        // Send email notification to employee
+        sendAppointmentNotificationToEmployee(savedAppointment);
+
+        return savedAppointment;
+    }
+
+    private void sendAppointmentNotificationToEmployee(Appointment appointment) {
+        try {
+            String employeeEmail = appointment.getEmployee().getEmail();
+            if (employeeEmail == null || !employeeEmail.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+                logger.error("Invalid employee email: {}", employeeEmail);
+                return;
+            }
+            emailService.sendAppointmentConfirmation(employeeEmail,
+                    appointment.getUser().getFullName(),
+                    appointment.getEmployee().getFullName(),
+                    appointment.getStartTime() + " - " + appointment.getEndTime(),
+                    appointment.getStoreService().getService().getServiceName());
+            logger.info("Email notification sent successfully to: {}", employeeEmail);
+        } catch (Exception e) {
+            logger.error("Failed to send email notification: {}", e.getMessage());
         }
-        invoice.setTotalAmount(totalAmount);
-        invoiceRepository.save(invoice);
-
-        // Gửi email thông báo cho nhân viên
-        sendAppointmentNotificationToEmployee(appointment);
-
-        return appointment;
     }
 
     /**
@@ -154,7 +159,6 @@ public class AppointmentService {
 
         // Kiểm tra xem có bị trùng thời gian không
         for (Appointment existingAppointment : employeeAppointments) {
-            // Nếu cuộc hẹn đã bị hủy, bỏ qua
             if (existingAppointment.getStatus() == Appointment.Status.CANCELED) {
                 continue;
             }
@@ -177,7 +181,6 @@ public class AppointmentService {
      * Cập nhật trạng thái khả dụng của time slot dựa trên các cuộc hẹn hiện có
      */
     private void updateTimeSlotAvailability(WorkingTimeSlot timeSlot) {
-        // Tính tổng thời gian của các cuộc hẹn (không bị hủy)
         long totalAppointmentMinutes = 0;
         long slotDurationMinutes = ChronoUnit.MINUTES.between(timeSlot.getStartTime(), timeSlot.getEndTime());
 
@@ -188,71 +191,29 @@ public class AppointmentService {
             }
         }
 
-        // Nếu thời gian còn lại ít hơn 30 phút, đánh dấu slot là không có sẵn
         boolean hasTimeAvailable = (slotDurationMinutes - totalAppointmentMinutes) >= 30;
         timeSlot.setIsAvailable(hasTimeAvailable);
     }
 
-    /**
-     * Gửi email thông báo đến nhân viên khi có cuộc hẹn mới
-     */
-    private void sendAppointmentNotificationToEmployee(Appointment appointment) {
-        try {
-            Employee employee = appointment.getEmployee();
-            User customer = appointment.getUser();
-            StoreService service = appointment.getStoreService();
-
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(employee.getEmail());
-            message.setSubject("Thông báo: Có lịch hẹn mới");
-
-            String emailContent = String.format(
-                    "Xin chào %s,\n\n" +
-                            "Bạn có một cuộc hẹn mới:\n" +
-                            "- Khách hàng: %s\n" +
-                            "- Dịch vụ: %s\n" +
-                            "- Thời gian bắt đầu: %s\n" +
-                            "- Thời gian kết thúc: %s\n" +
-                            "- Ghi chú: %s\n\n" +
-                            "Vui lòng chuẩn bị trước để phục vụ khách hàng tốt nhất.\n\n" +
-                            "Trân trọng,\n" +
-                            "Hệ thống quản lý",
-                    employee.getFullName(),
-                    customer.getFullName(),
-                    service.getService().getServiceName(),
-                    appointment.getStartTime().toString(),
-                    appointment.getEndTime().toString(),
-                    appointment.getNotes() != null ? appointment.getNotes() : "Không có"
-            );
-
-            message.setText(emailContent);
-            emailSender.send(message);
-        } catch (Exception e) {
-            // Log lỗi nhưng không dừng quy trình đặt lịch
-            System.err.println("Không thể gửi email thông báo: " + e.getMessage());
-        }
-    }
     @Transactional
     public void handleSuccessfulPayment(int invoiceId) {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn."));
 
-        if (invoice.getStatus() == InvoiceStatus.PAID) {
+        if (invoice.getStatus() == Invoice.InvoiceStatus.PAID) {
             return; // Tránh xử lý lại nếu đã thanh toán
         }
 
-        invoice.setStatus(InvoiceStatus.PAID);
+        invoice.setStatus(Invoice.InvoiceStatus.PAID);
         invoiceRepository.save(invoice);
 
-        // Cập nhật trạng thái tất cả appointment liên quan
-        List<InvoiceDetail> details = invoiceDetailRepository.findByInvoiceId(invoiceId);
+        List<InvoiceDetail> details = invoiceDetailRepository.findByInvoiceInvoiceId(invoiceId);
         for (InvoiceDetail detail : details) {
             Appointment appointment = detail.getAppointment();
             if (appointment != null && appointment.getStatus() == Appointment.Status.CONFIRMED) {
                 appointment.setStatus(Appointment.Status.COMPLETED);
                 appointmentRepository.save(appointment);
 
-                // Cộng điểm thưởng cho khách hàng
                 User user = appointment.getUser();
                 if (user != null) {
                     int currentPoints = user.getLoyaltyPoints() != null ? user.getLoyaltyPoints() : 0;
@@ -261,6 +222,120 @@ public class AppointmentService {
                 }
             }
         }
+    }
+
+    /**
+     * Retrieve an appointment by its ID
+     */
+    public Appointment getAppointmentById(Integer id) {
+        return appointmentRepository.findById(id)
+                .orElseThrow(() -> new AppointmentException("Appointment with ID " + id + " not found"));
+    }
+
+    /**
+     * Update an existing appointment
+     */
+    @Transactional
+    public Appointment updateAppointment(Integer id, AppointmentRequest request, String userEmail) {
+        Appointment appointment = getAppointmentById(id);
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new AppointmentException("User not found with email: " + userEmail));
+
+        if (!appointment.getUser().getEmail().equals(userEmail) && !user.getRoles().stream().anyMatch(r -> r.getRoleName().equals("EMPLOYEE"))) {
+            throw new AppointmentException("Unauthorized to update this appointment");
+        }
+
+        WorkingTimeSlot workingSlot = workingTimeSlotRepository.findById(request.getTimeSlotId())
+                .orElseThrow(() -> new AppointmentException("Working time slot not found: " + request.getTimeSlotId()));
+        com.example.serversideclinet.model.StoreService storeService = storeServiceRepository.findById(request.getStoreServiceId())
+                .orElseThrow(() -> new AppointmentException("Store service not found: " + request.getStoreServiceId()));
+
+        LocalDateTime startTime = request.getStartTime();
+        LocalDateTime endTime = request.getEndTime();
+        if (startTime.isBefore(LocalDateTime.now())) {
+            throw new AppointmentException("Cannot update to a time slot in the past");
+        }
+
+        List<Appointment> overlappingAppointments = appointmentRepository.findByEmployeeAndStartTimeBetween(
+                appointment.getEmployee(), startTime, endTime);
+        if (!overlappingAppointments.isEmpty() && overlappingAppointments.stream().noneMatch(a -> a.getAppointmentId().equals(id))) {
+            throw new AppointmentException("Time slot is already booked");
+        }
+
+        appointment.setWorkingSlot(workingSlot);
+        appointment.setStoreService(storeService);
+        appointment.setStartTime(startTime);
+        appointment.setEndTime(endTime);
+        appointment.setNotes(request.getNotes());
+
+        return appointmentRepository.save(appointment);
+    }
+
+    /**
+     * Delete an appointment
+     */
+    @Transactional
+    public void deleteAppointment(Integer id, String userEmail) {
+        Appointment appointment = getAppointmentById(id);
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new AppointmentException("User not found with email: " + userEmail));
+
+        if (!appointment.getUser().getEmail().equals(userEmail) && !user.getRoles().stream().anyMatch(r -> r.getRoleName().equals("EMPLOYEE"))) {
+            throw new AppointmentException("Unauthorized to delete this appointment");
+        }
+
+        appointmentRepository.delete(appointment);
+    }
+
+    /**
+     * Retrieve appointments by user email
+     */
+    public List<Appointment> getAppointmentsByUser(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppointmentException("User not found with email: " + email));
+        return appointmentRepository.findByUser(user);
+    }
+
+    /**
+     * Retrieve appointments by employee email
+     */
+    public List<Appointment> getAppointmentsByEmployee(String email) {
+        Employee employee = employeeRepository.findByEmail(email)
+                .orElseThrow(() -> new AppointmentException("Employee not found with email: " + email));
+        return appointmentRepository.findByEmployeeAndStatus(employee, Appointment.Status.PENDING);
+    }
+
+    /**
+     * Confirm an appointment
+     */
+    @Transactional
+    public Appointment confirmAppointment(Integer id) {
+        Appointment appointment = getAppointmentById(id);
+        if (appointment.getStatus() != Appointment.Status.PENDING) {
+            throw new AppointmentException("Only pending appointments can be confirmed");
+        }
+        appointment.setStatus(Appointment.Status.CONFIRMED);
+        return appointmentRepository.save(appointment);
+    }
+
+    /**
+     * Cancel an appointment
+     */
+    @Transactional
+    public Appointment cancelAppointment(Integer id, String userEmail) {
+        Appointment appointment = getAppointmentById(id);
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new AppointmentException("User not found with email: " + userEmail));
+
+        if (!appointment.getUser().getEmail().equals(userEmail) && !user.getRoles().stream().anyMatch(r -> r.getRoleName().equals("EMPLOYEE"))) {
+            throw new AppointmentException("Unauthorized to cancel this appointment");
+        }
+
+        if (appointment.getStatus() == Appointment.Status.COMPLETED) {
+            throw new AppointmentException("Completed appointments cannot be canceled");
+        }
+        appointment.setStatus(Appointment.Status.CANCELED);
+        return appointmentRepository.save(appointment);
     }
 
     public class AppointmentException extends RuntimeException {

@@ -1,6 +1,10 @@
 package com.example.serversideclinet.model;
 
 import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -23,17 +27,28 @@ public class Appointment {
     @ManyToOne
     @JoinColumn(name = "working_slot_id", nullable = false)
     @JsonIdentityReference(alwaysAsId = true)
-    // Add JsonBackReference to break the circular reference with WorkingTimeSlot
     @JsonBackReference("slot-appointments")
     private WorkingTimeSlot workingSlot;
 
+    @ManyToOne
+    @JoinColumn(name = "invoice_id")
+    @JsonIdentityReference(alwaysAsId = true)
+    @JsonBackReference("invoice-appointments")
+    private Invoice invoice;
+
     @Column(nullable = false)
+    @JsonSerialize(using = LocalDateTimeSerializer.class)
+    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", shape = JsonFormat.Shape.STRING)
     private LocalDateTime startTime;
 
     @Column(nullable = false)
+    @JsonSerialize(using = LocalDateTimeSerializer.class)
+    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", shape = JsonFormat.Shape.STRING)
     private LocalDateTime endTime;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "store_service_id", nullable = false)
     @JsonIdentityReference(alwaysAsId = true)
     private StoreService storeService;
@@ -45,20 +60,23 @@ public class Appointment {
 
     private boolean reminderSent = false;
 
+    @JsonSerialize(using = LocalDateTimeSerializer.class)
+    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", shape = JsonFormat.Shape.STRING)
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public Appointment(Integer appointmentId) {
+        this.appointmentId = appointmentId;
     }
 
     public Appointment() {
-
     }
 
     public enum Status {
         PENDING, CONFIRMED, COMPLETED, CANCELED
     }
 
-    // Getters and Setters remain the same
+    // Getters and Setters
     public Integer getAppointmentId() {
         return appointmentId;
     }
@@ -89,6 +107,14 @@ public class Appointment {
 
     public void setWorkingSlot(WorkingTimeSlot workingSlot) {
         this.workingSlot = workingSlot;
+    }
+
+    public Invoice getInvoice() {
+        return invoice;
+    }
+
+    public void setInvoice(Invoice invoice) {
+        this.invoice = invoice;
     }
 
     public LocalDateTime getStartTime() {

@@ -1,5 +1,7 @@
 package com.example.serversideclinet.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,6 +12,8 @@ import java.util.Properties;
 
 @Configuration
 public class MailConfig {
+
+    private static final Logger logger = LoggerFactory.getLogger(MailConfig.class);
 
     @Value("${spring.mail.host:smtp.gmail.com}")
     private String host;
@@ -35,10 +39,16 @@ public class MailConfig {
         mailSender.setHost(host);
         mailSender.setPort(port);
 
-        if (username != null && !username.isEmpty()) {
-            mailSender.setUsername(username);
-            mailSender.setPassword(password);
+        if (username == null || username.trim().isEmpty()) {
+            logger.error("Email username is not configured or is empty");
+            throw new IllegalStateException("Email username must be configured in application.properties");
         }
+        if (password == null || password.trim().isEmpty()) {
+            logger.error("Email password is not configured or is empty");
+            throw new IllegalStateException("Email password must be configured in application.properties");
+        }
+        mailSender.setUsername(username);
+        mailSender.setPassword(password);
 
         Properties props = mailSender.getJavaMailProperties();
         props.put("mail.transport.protocol", "smtp");

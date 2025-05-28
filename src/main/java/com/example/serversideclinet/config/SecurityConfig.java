@@ -33,35 +33,36 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors().and()
-                .csrf(csrf -> csrf.disable()) // Tắt CSRF
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/login",
                                 "/api/auth/forgot-password",
-                                "/api/auth/reset-password", // ✅ thêm dấu /
+                                "/api/auth/reset-password",
                                 "/api/auth/register",
                                 "/error"
-                        ).permitAll()// Cho phép truy cập không cần auth
+                        ).permitAll()
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "EMPLOYEE")
                         .requestMatchers("/employee/**").hasRole("EMPLOYEE")
-                        .requestMatchers("/api/store/**").permitAll() // Cho phép truy cập không cần auth
-                        .requestMatchers("/api/reviews/**").permitAll() // Cho phép truy cập không cần auth
+                        .requestMatchers("/api/store/**").permitAll()
+                        .requestMatchers("/api/reviews/**").permitAll()
                         .requestMatchers("/api/appointments/**").hasRole("CUSTOMER")
-                        .requestMatchers("/payment/**").permitAll()
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Thêm vào danh sách permitAll
+                        .requestMatchers("/api/services/**").hasAnyRole("ADMIN", "CUSTOMER")
+                        .requestMatchers("/api/employees/store/**").hasAnyRole("ADMIN", "CUSTOMER")
+                        .requestMatchers("/employee/working-time-slots/available").hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
                                 "/webjars/**"
                         ).permitAll()
-                        .anyRequest().authenticated() // Các request khác cần auth
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // Không dùng session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 );
 
-        // Thêm JWT filter trước UsernamePasswordAuthenticationFilter
         http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

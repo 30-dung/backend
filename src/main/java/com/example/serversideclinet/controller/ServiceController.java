@@ -2,14 +2,22 @@ package com.example.serversideclinet.controller;
 
 import com.example.serversideclinet.dto.ServiceRequest;
 import com.example.serversideclinet.model.ServiceEntity;
+import com.example.serversideclinet.model.StoreService; // Correct import
 import com.example.serversideclinet.service.ServiceService;
+import com.example.serversideclinet.service.StoreServiceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
 @RestController
 @RequestMapping("api/services")
 public class ServiceController {
+
+    @Autowired
+    private StoreServiceService storeServiceService;
 
     @Autowired
     private ServiceService serviceService;
@@ -55,5 +63,12 @@ public class ServiceController {
             return ResponseEntity.ok("Deleted successfully");
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
+    @GetMapping("/store/{storeId}")
+    public ResponseEntity<List<StoreService>> getServicesByStore(@PathVariable Integer storeId) {
+        List<StoreService> services = storeServiceService.getServicesByStoreId(storeId);
+        return ResponseEntity.ok(services);
     }
 }

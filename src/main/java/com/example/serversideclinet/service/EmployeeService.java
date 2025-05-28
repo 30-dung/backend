@@ -42,6 +42,10 @@ public class EmployeeService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    public List<Employee> getEmployeesByStore(Integer storeId) {
+        return employeeRepository.findByStoreStoreId(storeId);
+    }
+
     public Employee createEmployee(EmployeeRequestDTO dto) {
         if (employeeRepository.findByEmail(dto.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Email đã tồn tại. Vui lòng sử dụng email khác.");

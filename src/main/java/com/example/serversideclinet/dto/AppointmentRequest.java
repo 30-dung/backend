@@ -1,46 +1,66 @@
 package com.example.serversideclinet.dto;
 
-import lombok.Getter;
-
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import java.time.LocalDateTime;
 
-@Getter
 public class AppointmentRequest {
-    // Getters and Setters
-    private Integer timeSlotId;
     private Integer storeServiceId;
-    private String notes;
-    private LocalDateTime startTime;  // Thời gian bắt đầu cụ thể cho cuộc hẹn
+    private Integer timeSlotId;
 
-    public void setTimeSlotId(Integer timeSlotId) {
-        this.timeSlotId = timeSlotId;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", shape = JsonFormat.Shape.STRING)
+    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
+    @JsonSerialize(using = LocalDateTimeSerializer.class)
+    private LocalDateTime startTime;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", shape = JsonFormat.Shape.STRING)
+    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
+    @JsonSerialize(using = LocalDateTimeSerializer.class)
+    private LocalDateTime endTime;
+
+    private String notes;
+
+    // Getters and Setters
+    public Integer getStoreServiceId() {
+        return storeServiceId;
     }
 
     public void setStoreServiceId(Integer storeServiceId) {
         this.storeServiceId = storeServiceId;
     }
 
-    public void setNotes(String notes) {
-        this.notes = notes;
+    public Integer getTimeSlotId() {
+        return timeSlotId;
+    }
+
+    public void setTimeSlotId(Integer timeSlotId) {
+        this.timeSlotId = timeSlotId;
+    }
+
+    public LocalDateTime getStartTime() {
+        return startTime;
     }
 
     public void setStartTime(LocalDateTime startTime) {
         this.startTime = startTime;
     }
 
-    public Integer getTimeSlotId() {
-        return timeSlotId;
+    public LocalDateTime getEndTime() {
+        return endTime;
     }
 
-    public Integer getStoreServiceId() {
-        return storeServiceId;
+    public void setEndTime(LocalDateTime endTime) {
+        this.endTime = endTime;
     }
 
     public String getNotes() {
         return notes;
     }
 
-    public LocalDateTime getStartTime() {
-        return startTime;
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 }

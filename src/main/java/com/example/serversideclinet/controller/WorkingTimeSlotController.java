@@ -11,10 +11,18 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/employee/working-time-slots")
+@RequestMapping("/api/employee/working-time-slots")
 public class WorkingTimeSlotController {
     @Autowired
     private WorkingTimeSlotService slotService;
+
+    @GetMapping("/available")
+    public ResponseEntity<List<WorkingTimeSlot>> getAvailableSlots(
+            @RequestParam Integer employeeId,
+            @RequestParam String date) {
+        List<WorkingTimeSlot> slots = slotService.getAvailableSlots(employeeId, date);
+        return ResponseEntity.ok(slots);
+    }
 
     @PostMapping
     @PreAuthorize("hasRole('EMPLOYEE')")

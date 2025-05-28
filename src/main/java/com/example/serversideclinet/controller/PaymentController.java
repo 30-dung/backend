@@ -1,7 +1,6 @@
 package com.example.serversideclinet.controller;
 
 import com.example.serversideclinet.model.Invoice;
-import com.example.serversideclinet.model.InvoiceStatus;
 import com.example.serversideclinet.repository.InvoiceRepository;
 import com.example.serversideclinet.security.CustomUserDetails;
 import com.example.serversideclinet.service.EmailService;
@@ -61,7 +60,7 @@ public class PaymentController {
 
         Invoice invoice = invoiceOpt.get();
 
-        if (invoice.getStatus() == InvoiceStatus.PAID) {
+        if (invoice.getStatus() == Invoice.InvoiceStatus.PAID) {
             return ResponseEntity.ok("Hóa đơn đã được thanh toán trước đó.");
         }
 
@@ -71,7 +70,7 @@ public class PaymentController {
         String userEmail = invoice.getUser().getEmail();
 
         if (!"00".equals(responseCode) || !"00".equals(transactionStatus)) {
-            invoice.setStatus(InvoiceStatus.CANCELED);
+            invoice.setStatus(Invoice.InvoiceStatus.CANCELLED); // Sửa từ CANCELED thành CANCELLED
             invoiceRepository.save(invoice);
 
             try {
@@ -93,7 +92,7 @@ public class PaymentController {
         }
 
         // Thanh toán thành công
-        invoice.setStatus(InvoiceStatus.PAID);
+        invoice.setStatus(Invoice.InvoiceStatus.PAID);
         invoiceRepository.save(invoice);
 
         try {
@@ -114,5 +113,4 @@ public class PaymentController {
 
         return ResponseEntity.ok("Thanh toán thành công cho hóa đơn #" + invoice.getInvoiceId());
     }
-
 }

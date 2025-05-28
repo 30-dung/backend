@@ -1,38 +1,44 @@
 package com.example.serversideclinet.model;
 
-import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "WorkingTimeSlot")
 public class WorkingTimeSlot {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer timeSlotId;
 
     @ManyToOne
-    @JoinColumn(name = "store_id", nullable = false)
-    @JsonIdentityReference(alwaysAsId = true)
-    private Store store;
-
-    @ManyToOne
     @JoinColumn(name = "employee_id", nullable = false)
-    @JsonIdentityReference(alwaysAsId = true)
     private Employee employee;
 
+    @ManyToOne
+    @JoinColumn(name = "store_id", nullable = false)
+    private Store store;
+
     @Column(nullable = false)
+    @JsonSerialize(using = LocalDateTimeSerializer.class)
+    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", shape = JsonFormat.Shape.STRING)
     private LocalDateTime startTime;
 
     @Column(nullable = false)
+    @JsonSerialize(using = LocalDateTimeSerializer.class)
+    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss", shape = JsonFormat.Shape.STRING)
     private LocalDateTime endTime;
 
-    private Boolean isAvailable = true;
+    private boolean isAvailable;
 
-    @OneToMany(mappedBy = "workingSlot", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference("slot-appointments")
+    @OneToMany(mappedBy = "workingSlot", cascade = CascadeType.ALL)
     private List<Appointment> appointments = new ArrayList<>();
 
     // Getters and Setters
@@ -44,20 +50,20 @@ public class WorkingTimeSlot {
         this.timeSlotId = timeSlotId;
     }
 
-    public Store getStore() {
-        return store;
-    }
-
-    public void setStore(Store store) {
-        this.store = store;
-    }
-
     public Employee getEmployee() {
         return employee;
     }
 
     public void setEmployee(Employee employee) {
         this.employee = employee;
+    }
+
+    public Store getStore() {
+        return store;
+    }
+
+    public void setStore(Store store) {
+        this.store = store;
     }
 
     public LocalDateTime getStartTime() {
@@ -76,12 +82,12 @@ public class WorkingTimeSlot {
         this.endTime = endTime;
     }
 
-    public Boolean getIsAvailable() {
+    public boolean getIsAvailable() {
         return isAvailable;
     }
 
-    public void setIsAvailable(Boolean available) {
-        isAvailable = available;
+    public void setIsAvailable(boolean isAvailable) {
+        this.isAvailable = isAvailable;
     }
 
     public List<Appointment> getAppointments() {
@@ -90,20 +96,5 @@ public class WorkingTimeSlot {
 
     public void setAppointments(List<Appointment> appointments) {
         this.appointments = appointments;
-    }
-
-    // Helper methods
-    public void addAppointment(Appointment appointment) {
-        this.appointments.add(appointment);
-        if (appointment.getWorkingSlot() != this) {
-            appointment.setWorkingSlot(this);
-        }
-    }
-
-    public void removeAppointment(Appointment appointment) {
-        this.appointments.remove(appointment);
-        if (appointment.getWorkingSlot() == this) {
-            appointment.setWorkingSlot(null);
-        }
     }
 }

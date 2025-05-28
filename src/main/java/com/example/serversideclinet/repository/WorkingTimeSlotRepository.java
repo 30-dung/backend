@@ -13,5 +13,6 @@ public interface WorkingTimeSlotRepository extends JpaRepository<WorkingTimeSlot
     boolean existsByEmployeeAndStartTimeLessThanAndEndTimeGreaterThan(
             Employee employee, LocalDateTime endTime, LocalDateTime startTime);
     List<WorkingTimeSlot> findByEmployeeOrderByStartTimeAsc(Employee employee);
+    List<WorkingTimeSlot> findByEmployeeAndStartTimeBetween(Employee employee, LocalDateTime startTime, LocalDateTime endTime);
 
 }

@@ -29,6 +29,12 @@ public class EmployeeController {
     @Autowired
     private AppointmentService appointmentService;
 
+    @GetMapping("/store/{storeId}")
+    public ResponseEntity<List<Employee>> getEmployeesByStore(@PathVariable Integer storeId) {
+        List<Employee> employees = employeeService.getEmployeesByStore(storeId);
+        return ResponseEntity.ok(employees);
+    }
+
     @PostMapping("create")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Employee> createEmployee(@Valid @RequestBody EmployeeRequestDTO requestDTO) {
