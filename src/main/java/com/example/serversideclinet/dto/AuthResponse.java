@@ -3,19 +3,15 @@ package com.example.serversideclinet.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class AuthResponse {
-    @JsonProperty("token")
     private String token;
+    private String message;
 
-    @JsonProperty("role")
-    private String role;
-
-    // Constructor
-    public AuthResponse(String token, String role) {
+    public AuthResponse(String token, String message) {
         this.token = token;
-        this.role = role;
+        this.message = message;
     }
 
-    // Getter và Setter
+    // Getters and setters
     public String getToken() {
         return token;
     }
@@ -24,17 +20,11 @@ public class AuthResponse {
         this.token = token;
     }
 
-    public String getRole() {
-        return role;
+    public String getMessage() {
+        return message;
     }
 
-    public void setRole(String role) {
-        this.role = role;
-    }
-
-    // toString để debug
-    @Override
-    public String toString() {
-        return "AuthResponse{token='" + token + "', role='" + role + "'}";
+    public void setMessage(String message) {
+        this.message = message;
     }
 }
