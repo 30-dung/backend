@@ -12,7 +12,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -30,12 +29,8 @@ public class AppointmentController {
     @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<?> createAppointments(@RequestBody AppointmentRequest[] requests, Authentication authentication) {
         String email = authentication.getName();
-        List<Appointment> createdAppointments = new ArrayList<>();
         try {
-            for (AppointmentRequest request : requests) {
-                Appointment created = appointmentService.createAppointment(request, email);
-                createdAppointments.add(created);
-            }
+            List<Appointment> createdAppointments = appointmentService.createMultipleAppointments(requests, email);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdAppointments);
         } catch (AppointmentService.AppointmentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
@@ -59,7 +54,6 @@ public class AppointmentController {
             response.setStartTime(appointment.getStartTime().toString());
             response.setEndTime(appointment.getEndTime().toString());
             response.setStatus(appointment.getStatus().toString());
-            // Add null checks for storeService, store, and service
             String storeName = "Unknown Store";
             String serviceName = "Unknown Service";
             if (appointment.getStoreService() != null) {

@@ -52,46 +52,42 @@ public class WorkingTimeSlotService {
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
         logger.info("Found employee: {}", employee.getEmployeeId());
 
-        List<WorkingTimeSlot> slots = workingTimeSlotRepository
+        List<WorkingTimeSlot> workingSlots = workingTimeSlotRepository
                 .findByEmployeeAndStartTimeBetween(employee, startOfDay, endOfDay);
-        logger.info("Fetched {} slots: {}", slots.size(), slots);
+        logger.info("Fetched {} working slots: {}", workingSlots.size(), workingSlots);
 
-        LocalDateTime now = LocalDateTime.now();
-        logger.info("Current time: {}", now);
+        LocalDateTime now = LocalDateTime.now().withSecond(0).withNano(0);
+        logger.info("Current time (rounded): {}", now);
 
-        List<WorkingTimeSlot> dividedSlots = new ArrayList<>();
-        for (WorkingTimeSlot slot : slots) {
-            if (slot.getIsAvailable()) {
-                LocalDateTime current = LocalDateTime.of(localDate, LocalTime.of(7, 0)); // Bắt đầu từ 07:00
-                LocalDateTime end = LocalDateTime.of(localDate, LocalTime.of(22, 0));   // Kết thúc tại 22:00
-                int intervalMinutes = 60; // 1-hour intervals
+        List<WorkingTimeSlot> resultSlots = new ArrayList<>();
+        for (WorkingTimeSlot slot : workingSlots) {
+            LocalDateTime start = slot.getStartTime();
+            LocalDateTime end = slot.getEndTime();
+            int intervalMinutes = 60;
 
-                while (current.plusMinutes(intervalMinutes).isBefore(end) || current.plusMinutes(intervalMinutes).isEqual(end)) {
-                    WorkingTimeSlot newSlot = new WorkingTimeSlot();
-                    newSlot.setEmployee(slot.getEmployee());
-                    newSlot.setStore(slot.getStore());
-                    newSlot.setStartTime(current);
-                    newSlot.setEndTime(current.plusMinutes(intervalMinutes));
-                    newSlot.setIsAvailable(true);
-                    newSlot.setTimeSlotId(slot.getTimeSlotId());
+            while (start.isBefore(end)) {
+                WorkingTimeSlot newSlot = new WorkingTimeSlot();
+                newSlot.setEmployee(slot.getEmployee());
+                newSlot.setStore(slot.getStore());
+                newSlot.setStartTime(start);
+                LocalDateTime slotEnd = start.plusMinutes(intervalMinutes);
+                newSlot.setEndTime(slotEnd);
+                newSlot.setTimeSlotId(slot.getTimeSlotId());
 
-                    // Kiểm tra xung đột lịch hẹn
-                    List<Appointment> appointments = appointmentRepository
-                            .findByEmployeeAndStartTimeBetween(employee, newSlot.getStartTime(), newSlot.getEndTime());
-                    logger.info("Slot {} - Start: {}, Appointments found: {}", newSlot.getTimeSlotId(), newSlot.getStartTime(), appointments.size());
-                    boolean noConflict = appointments.stream()
-                            .noneMatch(apt -> apt.getStatus() != Appointment.Status.CANCELED);
-                    logger.info("Slot {} - No conflicting appointments: {}", newSlot.getTimeSlotId(), noConflict);
-                    if (noConflict) {
-                        dividedSlots.add(newSlot);
-                    }
-                    current = current.plusMinutes(intervalMinutes);
-                }
+                boolean isPast = slotEnd.isBefore(now) || slotEnd.isEqual(now);
+                List<Appointment> appointments = appointmentRepository
+                        .findByEmployeeAndTimeOverlap(employee, start, slotEnd.minusNanos(1));
+                boolean isBooked = appointments.stream()
+                        .anyMatch(apt -> apt.getStatus() != Appointment.Status.CANCELED);
+                newSlot.setIsAvailable(!isPast && !isBooked);
+
+                resultSlots.add(newSlot);
+                start = start.plusMinutes(intervalMinutes);
             }
         }
-        logger.info("Divided into {} slots", dividedSlots.size());
 
-        return dividedSlots;
+        logger.info("Generated {} slots with availability status", resultSlots.size());
+        return resultSlots;
     }
 
     @Transactional

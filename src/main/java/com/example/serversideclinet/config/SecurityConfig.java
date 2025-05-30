@@ -42,14 +42,14 @@ public class SecurityConfig {
                                 "/api/auth/register",
                                 "/error"
                         ).permitAll()
-                        .requestMatchers("/admin/**").hasAnyRole("ADMIN", "EMPLOYEE")
-                        .requestMatchers("/employee/**").hasRole("EMPLOYEE")
+                        .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "EMPLOYEE")
+                        .requestMatchers("/api/employee/**").hasAnyRole("EMPLOYEE", "CUSTOMER")
                         .requestMatchers("/api/store/**").permitAll()
                         .requestMatchers("/api/reviews/**").permitAll()
                         .requestMatchers("/api/appointments/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/services/**").hasAnyRole("ADMIN", "CUSTOMER")
                         .requestMatchers("/api/employees/store/**").hasAnyRole("ADMIN", "CUSTOMER")
-                        .requestMatchers("/employee/working-time-slots/available").hasRole("CUSTOMER")
+//                        .requestMatchers("/api/employee/working-time-slots/available/**").hasRole("CUSTOMER")
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/swagger-ui/**",
