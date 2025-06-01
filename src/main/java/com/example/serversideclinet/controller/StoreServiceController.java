@@ -1,4 +1,4 @@
-package com.example.serversideclinet.controller;// package com.example.serversideclinet.controller;
+package com.example.serversideclinet.controller;
 
 import com.example.serversideclinet.dto.StoreServiceRequest;
 import com.example.serversideclinet.model.StoreService;
@@ -10,31 +10,30 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @RestController
-@RequestMapping("/admin/create/price/store")
-@PreAuthorize("hasRole('ADMIN')")
+@RequestMapping("api/store-service")
 public class StoreServiceController {
 
     @Autowired
     private StoreServiceService storeServiceService;
 
-    @PostMapping
-    public ResponseEntity<StoreService> createPrice(
-            @RequestBody StoreServiceRequest request
-    ) {
+    // Tạo mới StoreService (ADMIN)
+    @PostMapping("/price")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<StoreService> createPrice(@RequestBody StoreServiceRequest request) {
         StoreService created = storeServiceService.createStoreService(request);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(created);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
-    @PutMapping("/{storeServiceId}/price")
-    public ResponseEntity<StoreService> updateStoreServicePrice(
-            @PathVariable int storeServiceId,
-            @RequestParam BigDecimal newPrice
-    ) {
-        StoreService updated = storeServiceService.updateServicePrice(storeServiceId, newPrice);
-        return ResponseEntity.ok(updated);
+
+
+    @GetMapping
+// Xoá hoặc comment dòng PreAuthorize
+// @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<List<StoreService>> getStoreServiceStore() {
+        List<StoreService> services = storeServiceService.getAllStoreServiceStore();
+        return ResponseEntity.ok(services);
     }
 
 }

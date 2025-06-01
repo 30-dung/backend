@@ -44,6 +44,7 @@ public class SecurityConfig {
                                 "/api/auth/register",
                                 "/error"
                         ).permitAll()// Cho phép truy cập không cần auth
+                        .requestMatchers(HttpMethod.GET, "/api/store-service").permitAll()
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "EMPLOYEE")
                         .requestMatchers("/employee/**").hasRole("EMPLOYEE")
                         .requestMatchers("/api/store/**").permitAll() // Cho phép truy cập không cần auth

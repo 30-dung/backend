@@ -37,12 +37,11 @@ public class AppointmentController {
         }
     }
 
-
     @GetMapping
-    public ResponseEntity<List<Appointment>> getAllAppointments() {
-        List<Appointment> appointments = appointmentService.getAllAppointments();
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<List<Appointment>> getAllAppointments(Authentication authentication) {
+        String email = authentication.getName(); // Lấy email của người dùng hiện tại
+        List<Appointment> appointments = appointmentService.getAppointmentsByUserEmail(email);
         return new ResponseEntity<>(appointments, HttpStatus.OK);
     }
-
-
 }

@@ -272,4 +272,9 @@ public class AppointmentService {
     public List<Appointment> getAllAppointments() {
         return appointmentRepository.findAll();
     }
+    public List<Appointment> getAppointmentsByUserEmail(String email) {
+        User user = userService.findByEmail(email)
+                .orElseThrow(() -> new AppointmentException("Không tìm thấy người dùng."));
+        return appointmentRepository.findByUser(user);
+    }
 }
