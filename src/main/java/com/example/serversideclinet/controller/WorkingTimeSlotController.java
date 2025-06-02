@@ -24,13 +24,13 @@ public class WorkingTimeSlotController {
         return ResponseEntity.ok(slots);
     }
 
-    @PostMapping
+    @PostMapping("/registration")
     @PreAuthorize("hasRole('EMPLOYEE')")
     public ResponseEntity<WorkingTimeSlot> create(@RequestBody WorkingTimeSlotRequest request){
         WorkingTimeSlot createdSot = slotService.createSlot(request);
         return ResponseEntity.ok(createdSot);
     }
-    @GetMapping
+    @GetMapping("/worktimelist")
     @PreAuthorize("hasRole('EMPLOYEE')")
     public ResponseEntity<List<WorkingTimeSlot>> getMyWorkingSlots() {
         List<WorkingTimeSlot> slots = slotService.getMyWorkingSlots();

@@ -65,7 +65,15 @@ public class EmployeeController {
         return ResponseEntity.ok(responseDTO);
     }
 
+    @GetMapping("/profile")
+    @PreAuthorize("hasRole('EMPLOYEE')") // Chỉ nhân viên được truy cập endpoint này
+    public ResponseEntity<Employee> getEmployeeProfile(@AuthenticationPrincipal CustomUserDetails currentUser) {
+        Integer employeeId = currentUser.getEmployeeId();
+        Employee employee = employeeService.findEmployeeById(employeeId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin của nhân viên với ID: " + employeeId));
 
+        return ResponseEntity.ok(employee);
+    }
 
 }
 
