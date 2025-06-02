@@ -23,7 +23,6 @@ public class Appointment {
     @ManyToOne
     @JoinColumn(name = "working_slot_id", nullable = false)
     @JsonIdentityReference(alwaysAsId = true)
-    // Add JsonBackReference to break the circular reference with WorkingTimeSlot
     @JsonBackReference("slot-appointments")
     private WorkingTimeSlot workingSlot;
 
@@ -47,6 +46,13 @@ public class Appointment {
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    // Thêm trường để theo dõi thời gian hoàn thành
+    private LocalDateTime completedAt;
+
+    // Thêm trường để theo dõi việc tính lương
+    @Column(nullable = false, columnDefinition = "BOOLEAN default FALSE")
+    private Boolean salaryCalculated = false;
+
     public Appointment(Integer appointmentId) {
     }
 
@@ -58,7 +64,7 @@ public class Appointment {
         PENDING, CONFIRMED, COMPLETED, CANCELED
     }
 
-    // Getters and Setters remain the same
+    // Getters and Setters
     public Integer getAppointmentId() {
         return appointmentId;
     }
@@ -129,6 +135,10 @@ public class Appointment {
 
     public void setStatus(Status status) {
         this.status = status;
+        // Tự động set completedAt khi status chuyển thành COMPLETED
+        if (status == Status.COMPLETED && this.completedAt == null) {
+            this.completedAt = LocalDateTime.now();
+        }
     }
 
     public boolean isReminderSent() {
@@ -145,5 +155,28 @@ public class Appointment {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getCompletedAt() {
+        return completedAt;
+    }
+
+    public void setCompletedAt(LocalDateTime completedAt) {
+        this.completedAt = completedAt;
+    }
+
+    public Boolean getSalaryCalculated() {
+        return salaryCalculated;
+    }
+
+    public void setSalaryCalculated(Boolean salaryCalculated) {
+        this.salaryCalculated = salaryCalculated;
+    }
+
+    // Helper method để check xem có thể tính lương không
+    public boolean canCalculateSalary() {
+        return this.status == Status.COMPLETED &&
+                this.completedAt != null &&
+                !this.salaryCalculated;
     }
 }

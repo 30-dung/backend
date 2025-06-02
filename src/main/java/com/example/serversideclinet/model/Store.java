@@ -19,8 +19,8 @@ public class Store {
 
     @Column(nullable = false)
     private String storeName;
-@Column(nullable = false)
-private String storeImages;
+    @Column(nullable = false)
+    private String storeImages;
     @Column(nullable = false)
     private String phoneNumber;
 

@@ -17,4 +17,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
             Employee employee, LocalDateTime startTime, LocalDateTime endTime);
     List<Appointment> findByUser(User user);
     List<Appointment> findByEmployeeAndStatus(Employee employee, Appointment.Status status);
+
+    List<Appointment> findByStatusAndSalaryCalculated(Appointment.Status status, boolean b);
 }
