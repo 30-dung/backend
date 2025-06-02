@@ -1,11 +1,11 @@
 package com.example.serversideclinet.dto;
 
-
 public class AppointmentStatusResponseDTO {
     private Integer appointmentId;
-    private String status;  // CONFIRMED, CANCELED, PENDING
+    private String status;  // PENDING, CONFIRMED, CANCELED, COMPLETED
     private String startTime;
     private String endTime;
+    private String completedAt;  // New field for completion timestamp
     private String employeeName;
     private String userName;
     private String serviceName;
@@ -13,21 +13,21 @@ public class AppointmentStatusResponseDTO {
 
     // Constructor
     public AppointmentStatusResponseDTO(Integer appointmentId, String status,
-                                        String startTime, String endTime,
+                                        String startTime, String endTime, String completedAt,
                                         String employeeName, String userName,
-                                        String serviceName, String notes) {
+                                        String serviceName) {
         this.appointmentId = appointmentId;
         this.status = status;
         this.startTime = startTime;
         this.endTime = endTime;
+        this.completedAt = completedAt;
         this.employeeName = employeeName;
         this.userName = userName;
         this.serviceName = serviceName;
         this.notes = notes;
     }
 
-    // Getters và Setters (hoặc dùng Lombok @Data nếu bạn dùng)
-
+    // Getters and Setters
     public Integer getAppointmentId() { return appointmentId; }
     public void setAppointmentId(Integer appointmentId) { this.appointmentId = appointmentId; }
     public String getStatus() { return status; }
@@ -36,6 +36,8 @@ public class AppointmentStatusResponseDTO {
     public void setStartTime(String startTime) { this.startTime = startTime; }
     public String getEndTime() { return endTime; }
     public void setEndTime(String endTime) { this.endTime = endTime; }
+    public String getCompletedAt() { return completedAt; }
+    public void setCompletedAt(String completedAt) { this.completedAt = completedAt; }
     public String getEmployeeName() { return employeeName; }
     public void setEmployeeName(String employeeName) { this.employeeName = employeeName; }
     public String getUserName() { return userName; }

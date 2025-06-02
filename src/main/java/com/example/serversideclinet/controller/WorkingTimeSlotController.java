@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/employee/working-time-slots")
+@RequestMapping("api/working-time-slots")
 public class WorkingTimeSlotController {
     @Autowired
     private WorkingTimeSlotService slotService;

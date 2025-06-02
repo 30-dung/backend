@@ -18,7 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -47,7 +47,6 @@ public class EmployeeService {
             throw new IllegalArgumentException("Email đã tồn tại. Vui lòng sử dụng email khác.");
         }
 
-
         // Kiểm tra mã nhân viên
         if (employeeRepository.existsByEmployeeCode(dto.getEmployeeCode())) {
             throw new RuntimeException("Mã nhân viên đã tồn tại");
@@ -73,7 +72,6 @@ public class EmployeeService {
             throw new RuntimeException("Một hoặc nhiều role không tồn tại");
         }
 
-
         Employee employee = new Employee();
         employee.setEmployeeCode(dto.getEmployeeCode());
         employee.setFullName(dto.getFullName());
@@ -89,6 +87,7 @@ public class EmployeeService {
 
         return employeeRepository.save(employee);
     }
+
     /**
      * Lấy tất cả nhân viên từ hệ thống
      *
@@ -124,6 +123,7 @@ public class EmployeeService {
                 appt.getUser().getEmail()
         )).toList();
     }
+
     @Transactional
     public AppointmentStatusResponseDTO updateAppointmentStatus(Integer employeeId, Integer appointmentId, String action) throws MessagingException, IOException {
         Employee employee = employeeRepository.findById(employeeId)
@@ -136,10 +136,6 @@ public class EmployeeService {
             throw new RuntimeException("Bạn không có quyền thay đổi cuộc hẹn này");
         }
 
-        if (appointment.getStatus() != Appointment.Status.PENDING) {
-            throw new RuntimeException("Chỉ có thể thay đổi cuộc hẹn ở trạng thái PENDING");
-        }
-
         String timeRange = appointment.getStartTime() + " - " + appointment.getEndTime();
         String customerName = appointment.getUser().getFullName();
         String email = appointment.getUser().getEmail();
@@ -148,17 +144,33 @@ public class EmployeeService {
 
         switch (action.toUpperCase()) {
             case "CONFIRM":
+                if (appointment.getStatus() != Appointment.Status.PENDING) {
+                    throw new RuntimeException("Chỉ có thể xác nhận cuộc hẹn ở trạng thái PENDING");
+                }
                 appointment.setStatus(Appointment.Status.CONFIRMED);
                 appointmentRepository.save(appointment);
                 emailService.sendAppointmentConfirmation(email, customerName, employeeName, timeRange, serviceName);
                 break;
             case "CANCEL":
+                if (appointment.getStatus() != Appointment.Status.PENDING) {
+                    throw new RuntimeException("Chỉ có thể hủy cuộc hẹn ở trạng thái PENDING");
+                }
                 appointment.setStatus(Appointment.Status.CANCELED);
                 appointmentRepository.save(appointment);
                 emailService.sendAppointmentCancellation(email, customerName, employeeName, timeRange, serviceName);
                 break;
+            case "COMPLETE":
+                if (appointment.getStatus() != Appointment.Status.CONFIRMED) {
+                    throw new RuntimeException("Chỉ có thể đánh dấu hoàn thành cuộc hẹn ở trạng thái CONFIRMED");
+                }
+                appointment.setStatus(Appointment.Status.COMPLETED);
+                appointment.setCompletedAt(LocalDateTime.now());
+                appointment.setSalaryCalculated(false); // Ensure salary can be calculated
+                appointmentRepository.save(appointment);
+                emailService.sendAppointmentCompletion(email, customerName, employeeName, timeRange, serviceName);
+                break;
             default:
-                throw new IllegalArgumentException("Hành động không hợp lệ: chỉ chấp nhận CONFIRM hoặc CANCEL");
+                throw new IllegalArgumentException("Hành động không hợp lệ: chỉ chấp nhận CONFIRM, CANCEL hoặc COMPLETE");
         }
 
         return new AppointmentStatusResponseDTO(
@@ -172,8 +184,4 @@ public class EmployeeService {
                 appointment.getNotes()
         );
     }
-
-
-
-
 }

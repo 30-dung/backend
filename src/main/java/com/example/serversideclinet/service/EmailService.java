@@ -98,4 +98,11 @@ public class EmailService {
                 </html>
                 """.formatted(content);
     }
+
+    public void sendAppointmentCompletion(String to, String customerName, String employeeName, String timeRange, String serviceName) throws MessagingException, IOException {
+        String subject = "Xác nhận hoàn thành cuộc hẹn";
+        String content = String.format("Kính gửi %s,\n\nCuộc hẹn của bạn cho dịch vụ %s vào thời gian %s với nhân viên %s đã được hoàn thành.\n\nTrân trọng,\nĐội ngũ chúng tôi",
+                customerName, serviceName, timeRange, employeeName);
+        // Implement email sending logic (e.g., using JavaMailSender)
+    }
 }
