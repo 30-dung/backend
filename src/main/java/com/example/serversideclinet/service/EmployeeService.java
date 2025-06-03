@@ -18,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -84,6 +85,41 @@ public class EmployeeService {
         employee.setStore(store);
         employee.setRoles(new HashSet<>(roles));
         employee.setAvatarUrl(dto.getAvatarUrl());
+
+        // *** THÊM PHẦN NÀY: Set lương mặc định ***
+        // Lương cơ bản mặc định: 10,000,000 VND
+        employee.setBaseSalary(new BigDecimal("10000000.00"));
+
+        // Tỷ lệ hoa hồng mặc định: 5% (0.05)
+        employee.setCommissionRate(new BigDecimal("0.05"));
+
+        // Loại lương: Lương cố định + hoa hồng
+        employee.setSalaryType(Employee.SalaryType.MIXED);
+
+        return employeeRepository.save(employee);
+    }
+
+    /**
+     * Cập nhật thông tin lương cho nhân viên
+     */
+    public Employee updateEmployeeSalary(Integer employeeId, BigDecimal baseSalary,
+                                         BigDecimal commissionRate, Employee.SalaryType salaryType) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
+
+        if (baseSalary != null) {
+            employee.setBaseSalary(baseSalary);
+        }
+
+        if (commissionRate != null) {
+            employee.setCommissionRate(commissionRate);
+        }
+
+        if (salaryType != null) {
+            employee.setSalaryType(salaryType);
+        }
+
+        employee.setUpdatedAt(LocalDateTime.now());
 
         return employeeRepository.save(employee);
     }
@@ -176,8 +212,8 @@ public class EmployeeService {
         return new AppointmentStatusResponseDTO(
                 appointment.getAppointmentId(),
                 appointment.getStatus().name(),
-                appointment.getStartTime().toString(),
                 appointment.getEndTime().toString(),
+                appointment.getStartTime().toString(),
                 employeeName,
                 customerName,
                 serviceName,

@@ -177,6 +177,8 @@ public class Appointment {
     public boolean canCalculateSalary() {
         return this.status == Status.COMPLETED &&
                 this.completedAt != null &&
-                !this.salaryCalculated;
+                !this.salaryCalculated &&
+                this.employee != null &&
+                this.storeService != null;
     }
 }
