@@ -7,8 +7,14 @@ import com.example.serversideclinet.repository.EmployeeRepository;
 import com.example.serversideclinet.repository.PayrollSummaryRepository;
 import com.example.serversideclinet.repository.SalaryRecordRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -28,9 +34,6 @@ public class SalaryController {
     private SalaryService salaryService;
 
     @Autowired
-    private EmployeeService employeeService;
-
-    @Autowired
     private EmployeeRepository employeeRepository;
 
     @Autowired
@@ -38,77 +41,6 @@ public class SalaryController {
 
     @Autowired
     private SalaryRecordRepository salaryRecordRepository;
-
-    /**
-     * Cập nhật thông tin lương cho nhân viên
-     */
-    @PutMapping("/employee/{employeeId}/salary")
-    public ResponseEntity<Map<String, Object>> updateEmployeeSalary(
-            @PathVariable Integer employeeId,
-            @RequestParam(required = false) BigDecimal baseSalary,
-            @RequestParam(required = false) BigDecimal commissionRate,
-            @RequestParam(required = false) String salaryType) {
-
-        try {
-            Employee.SalaryType type = null;
-            if (salaryType != null) {
-                type = Employee.SalaryType.valueOf(salaryType.toUpperCase());
-            }
-
-            Employee employee = employeeService.updateEmployeeSalary(employeeId, baseSalary, commissionRate, type);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Cập nhật thông tin lương thành công");
-            response.put("employee", employee);
-
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Lỗi cập nhật lương: " + e.getMessage());
-
-            return ResponseEntity.badRequest().body(response);
-        }
-    }
-
-    /**
-     * Cập nhật lương cho nhân viên hiện tại (có thể dùng SQL để update nhanh)
-     */
-    @PostMapping("/update-existing-employees")
-    public ResponseEntity<Map<String, Object>> updateExistingEmployeesSalary() {
-        try {
-            List<Employee> employees = employeeRepository.findAll();
-            int updatedCount = 0;
-
-            for (Employee employee : employees) {
-                // Chỉ update những nhân viên chưa có lương được set
-                if (employee.getBaseSalary().compareTo(BigDecimal.ZERO) == 0 &&
-                        employee.getCommissionRate().compareTo(BigDecimal.ZERO) == 0) {
-
-                    employee.setBaseSalary(new BigDecimal("10000000.00")); // 10 triệu
-                    employee.setCommissionRate(new BigDecimal("0.05"));     // 5%
-                    employee.setSalaryType(Employee.SalaryType.MIXED);
-
-                    employeeRepository.save(employee);
-                    updatedCount++;
-                }
-            }
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Đã cập nhật lương cho " + updatedCount + " nhân viên");
-            response.put("updatedCount", updatedCount);
-
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Lỗi cập nhật: " + e.getMessage());
-
-            return ResponseEntity.badRequest().body(response);
-        }
-    }
 
     /**
      * Tự động tính lương cho tất cả appointments chưa được tính
@@ -287,6 +219,55 @@ public class SalaryController {
             response.put("message", "Lỗi lấy danh sách nhân viên: " + e.getMessage());
 
             return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * API lấy lịch sử bảng lương của nhân viên (dựa theo token)
+     */
+    @GetMapping("/my-payroll/history")
+    public ResponseEntity<Map<String, Object>> getMyPayrollHistory(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        try {
+            // Lấy email từ SecurityContext (token đã xử lý sẵn)
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String email = authentication.getName();
+
+            Optional<Employee> employeeOpt = employeeRepository.findByEmail(email);
+            if (employeeOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Không tìm thấy thông tin nhân viên"
+                ));
+            }
+
+            Employee employee = employeeOpt.get();
+
+            // ✅ FIXED: Sử dụng đúng Pageable từ Spring Data
+            Pageable pageable = PageRequest.of(page, size, Sort.by("periodStartDate").descending());
+            Page<PayrollSummary> payrollPage = payrollSummaryRepository.findByEmployee(employee, pageable);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "employee", Map.of(
+                            "employeeId", employee.getEmployeeId(),
+                            "email", employee.getEmail()
+                    ),
+                    "payrolls", payrollPage.getContent(),
+                    "totalRecords", payrollPage.getTotalElements(),
+                    "totalPages", payrollPage.getTotalPages(),
+                    "currentPage", payrollPage.getNumber(),
+                    "hasNext", payrollPage.hasNext(),
+                    "hasPrevious", payrollPage.hasPrevious()
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Lỗi lấy lịch sử bảng lương: " + e.getMessage()
+            ));
         }
     }
 }

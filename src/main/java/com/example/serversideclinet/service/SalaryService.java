@@ -114,12 +114,20 @@ public class SalaryService {
         switch (salaryType) {
             case FIXED:
             case MIXED:
-                // Tính theo tỉ lệ ngày làm việc (giả sử 30 ngày/tháng)
-                long workingDays = endDate.toEpochDay() - startDate.toEpochDay() + 1;
-                return baseSalary.multiply(BigDecimal.valueOf(workingDays))
-                        .divide(BigDecimal.valueOf(30), 2, RoundingMode.HALF_UP);
+                // Nếu tính cho cả tháng (từ đầu tháng đến cuối tháng)
+                if (startDate.getDayOfMonth() == 1 && endDate.equals(startDate.plusMonths(1).minusDays(1))) {
+                    return baseSalary; // Trả full lương tháng
+                } else {
+                    // Tính theo tỷ lệ ngày thực tế trong tháng
+                    long totalDaysInMonth = startDate.lengthOfMonth();
+                    long workingDays = endDate.toEpochDay() - startDate.toEpochDay() + 1;
+                    return baseSalary.multiply(BigDecimal.valueOf(workingDays))
+                            .divide(BigDecimal.valueOf(totalDaysInMonth), 2, RoundingMode.HALF_UP);
+                }
+
             case COMMISSION:
                 return BigDecimal.ZERO;
+
             default:
                 return BigDecimal.ZERO;
         }

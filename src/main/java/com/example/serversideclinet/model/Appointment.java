@@ -42,7 +42,6 @@ public class Appointment {
     @Enumerated(EnumType.STRING)
     private Status status = Status.PENDING;
 
-    private boolean reminderSent = false;
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -141,13 +140,7 @@ public class Appointment {
         }
     }
 
-    public boolean isReminderSent() {
-        return reminderSent;
-    }
 
-    public void setReminderSent(boolean reminderSent) {
-        this.reminderSent = reminderSent;
-    }
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
