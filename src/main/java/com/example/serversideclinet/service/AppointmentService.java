@@ -3,6 +3,7 @@ package com.example.serversideclinet.service;
 import com.example.serversideclinet.dto.AppointmentRequest;
 import com.example.serversideclinet.model.*;
 import com.example.serversideclinet.repository.*;
+import com.example.serversideclinet.util.SlugGenerator;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,6 +106,7 @@ public class AppointmentService {
             appointment.setStatus(Appointment.Status.PENDING);
             appointment.setCreatedAt(LocalDateTime.now());
             appointment.setReminderSent(false);
+            appointment.setSlug(generateUniqueSlug()); // Tạo slug duy nhất
 
             createdAppointments.add(appointment);
             totalAmount = totalAmount.add(storeService.getPrice());
@@ -147,29 +149,37 @@ public class AppointmentService {
         // Send emails after transaction completes
         logger.info("Sending email notifications for {} appointments.", createdAppointments.size());
         for (Appointment appointment : createdAppointments) {
-            sendAppointmentNotificationToEmployee(appointment);
+            sendAppointmentNotificationToCustomer(appointment);
         }
 
         logger.info("Successfully created {} appointments for user: {}", createdAppointments.size(), userEmail);
         return createdAppointments;
     }
 
-    private void sendAppointmentNotificationToEmployee(Appointment appointment) {
+    private String generateUniqueSlug() {
+        String slug;
+        do {
+            slug = SlugGenerator.generateSlug();
+        } while (appointmentRepository.existsBySlug(slug));
+        return slug;
+    }
+
+    private void sendAppointmentNotificationToCustomer(Appointment appointment) {
         try {
-            String employeeEmail = appointment.getEmployee().getEmail();
-            if (employeeEmail == null || !employeeEmail.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
-                logger.error("Invalid employee email: {}", employeeEmail);
+            String customerEmail = appointment.getUser().getEmail();
+            if (customerEmail == null || !customerEmail.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+                logger.error("Invalid customer email: {}", customerEmail);
                 return;
             }
             emailService.sendAppointmentConfirmation(
-                    employeeEmail,
+                    customerEmail,
                     appointment.getUser().getFullName(),
                     appointment.getEmployee().getFullName(),
                     appointment.getStartTime() + " - " + appointment.getEndTime(),
                     appointment.getStoreService().getService().getServiceName());
-            logger.info("Email notification sent successfully to: {}", employeeEmail);
+            logger.info("Email notification sent successfully to customer: {}", customerEmail);
         } catch (Exception e) {
-            logger.error("Failed to send email notification: {}", e.getMessage());
+            logger.error("Failed to send email notification to customer: {}", e.getMessage());
         }
     }
 
@@ -205,6 +215,11 @@ public class AppointmentService {
     public Appointment getAppointmentById(Integer id) {
         return appointmentRepository.findById(id)
                 .orElseThrow(() -> new AppointmentException("Appointment with ID " + id + " not found"));
+    }
+
+    public Appointment getAppointmentBySlug(String slug) {
+        return appointmentRepository.findBySlug(slug)
+                .orElseThrow(() -> new AppointmentException("Appointment with slug " + slug + " not found"));
     }
 
     @Transactional
@@ -259,7 +274,7 @@ public class AppointmentService {
     public List<Appointment> getAppointmentsByUser(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new AppointmentException("User not found with email: " + email));
-        return appointmentRepository.findByUser(user);
+        return appointmentRepository.findByUserOrderByCreatedAtDesc(user); // Sử dụng phương thức mới
     }
 
     public List<Appointment> getAppointmentsByEmployee(String email) {

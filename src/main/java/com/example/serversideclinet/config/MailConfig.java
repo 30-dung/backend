@@ -35,6 +35,7 @@ public class MailConfig {
 
     @Bean
     public JavaMailSender getJavaMailSender() {
+        logger.info("Configuring JavaMailSender with host: {}, port: {}, username: {}", host, port, username);
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
         mailSender.setHost(host);
         mailSender.setPort(port);
@@ -56,6 +57,7 @@ public class MailConfig {
         props.put("mail.smtp.starttls.enable", starttls);
         props.put("mail.debug", "true");
 
+        logger.info("JavaMailSender bean created successfully");
         return mailSender;
     }
 }
