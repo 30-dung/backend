@@ -14,6 +14,9 @@ public class Appointment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer appointmentId;
 
+    @Column(unique = true, nullable = false, length = 10)
+    private String slug;
+
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     @JsonIdentityReference(alwaysAsId = true)
@@ -83,6 +86,14 @@ public class Appointment {
 
     public void setAppointmentId(Integer appointmentId) {
         this.appointmentId = appointmentId;
+    }
+
+    public String getSlug() {
+        return slug;
+    }
+
+    public void setSlug(String slug) {
+        this.slug = slug;
     }
 
     public User getUser() {

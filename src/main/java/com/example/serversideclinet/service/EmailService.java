@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -16,31 +17,41 @@ public class EmailService {
     @Autowired
     private JavaMailSender mailSender;
 
+    @Async
     public void sendAppointmentConfirmation(String to, String customerName, String employeeName, String timeRange, String serviceName) throws MessagingException, IOException {
         String subject = "Xác nhận cuộc hẹn thành công";
         String content = """
-                <p>Chào <strong>%s</strong>,</p>
-                <p>Cuộc hẹn của bạn với nhân viên <strong>%s</strong> cho dịch vụ <strong>%s</strong> vào thời gian <strong>%s</strong> đã được xác nhận.</p>
-                <p>Hẹn gặp bạn tại cửa hàng!</p>
+                Chào %s,
+
+                Cuộc hẹn của bạn với nhân viên %s cho dịch vụ %s vào thời gian %s đã được xác nhận.
+
+                Hẹn gặp bạn tại cửa hàng!
+
                 """.formatted(customerName, employeeName, serviceName, timeRange);
 
         sendHtmlEmailWithLogo(to, subject, content);
     }
 
+    @Async
     public void sendAppointmentCancellation(String to, String customerName, String employeeName, String timeRange, String serviceName) throws MessagingException, IOException {
         String subject = "Cuộc hẹn bị hủy";
         String content = """
-                <p>Chào <strong>%s</strong>,</p>
-                <p>Cuộc hẹn với nhân viên <strong>%s</strong> cho dịch vụ <strong>%s</strong> vào thời gian <strong>%s</strong> đã bị hủy.</p>
-                <p>Nếu đây là sự nhầm lẫn, bạn có thể đặt lại cuộc hẹn.</p>
+                Chào %s,
+
+                Cuộc hẹn với nhân viên %s cho dịch vụ %s vào thời gian %s đã bị hủy.
+
+                Nếu đây là sự nhầm lẫn, bạn có thể đặt lại cuộc hẹn.
+
                 """.formatted(customerName, employeeName, serviceName, timeRange);
 
         sendHtmlEmailWithLogo(to, subject, content);
     }
 
+    @Async
     public void sendInvoiceEmail(String to, String subject, String bodyContent) throws MessagingException, IOException {
         sendHtmlEmailWithLogo(to, subject, bodyContent);
     }
+
 
     private void sendHtmlEmailWithLogo(String to, String subject, String htmlBody) throws MessagingException, IOException {
         MimeMessage message = mailSender.createMimeMessage();
@@ -61,37 +72,20 @@ public class EmailService {
     private String buildHtmlEmail(String content) {
         return """
                 <html>
-                    <head>
-                        <style>
-                            body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
-                            .container { max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-                            .header { text-align: center; }
-                            .footer { margin-top: 30px; font-size: 12px; color: #888; text-align: center; }
-                            .button {
-                                display: inline-block;
-                                padding: 10px 20px;
-                                background-color: #007bff;
-                                color: white;
-                                text-decoration: none;
-                                border-radius: 5px;
-                                margin-top: 20px;
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="container">
-                            <div class="header">
-                                <img src="cid:barbershopImage" alt="BarberShop" width="150" />
-                                <h2>BarberShop - Hệ thống của 30 Dark</h2>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                            <div style="text-align: center;">
+                                <img src="cid:barbershopImage" alt="BarberShop Logo" style="max-width: 150px;" />
+                                <h2 style="color: #15397F;">BarberShop - Hệ thống của 30 Dark</h2>
                             </div>
-                            <div class="body">
+                            <div style="margin: 20px 0;">
                                 %s
                             </div>
-                            <div class="footer">
-                                Cảm ơn bạn đã sử dụng dịch vụ của <strong>BarberShop</strong> – thuộc công ty <strong>30 Dark</strong>.<br/>
-                                Địa chỉ: 123 Đường ABC, Quận XYZ<br/>
-                                Hotline: <strong>0384 804 325</strong><br/>
-                                Website: <a href="https://yourdomain.com">yourdomain.com</a>
+                            <div style="text-align: center; color: #777;">
+                                <p>Cảm ơn bạn đã sử dụng dịch vụ của BarberShop – thuộc công ty 30 Dark.</p>
+                                <p>Địa chỉ: 123 Đường ABC, Quận XYZ</p>
+                                <p>Hotline: 0384 804 325</p>
+                                <p>Website: <a href="http://yourdomain.com">yourdomain.com</a></p>
                             </div>
                         </div>
                     </body>

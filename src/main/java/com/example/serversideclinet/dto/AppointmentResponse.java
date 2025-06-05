@@ -2,14 +2,16 @@ package com.example.serversideclinet.dto;
 
 public class AppointmentResponse {
     private Integer appointmentId;
+    private String slug;
     private String startTime;
     private String endTime;
     private String status;
+    private String createdAt; // Thêm trường createdAt
     private StoreService storeService;
     private Employee employee;
     private Invoice invoice;
 
-    // Nested classes for nested objects
+    // Nested classes
     public static class StoreService {
         private String storeName;
         private String serviceName;
@@ -50,12 +52,16 @@ public class AppointmentResponse {
     // Getters and Setters
     public Integer getAppointmentId() { return appointmentId; }
     public void setAppointmentId(Integer appointmentId) { this.appointmentId = appointmentId; }
+    public String getSlug() { return slug; }
+    public void setSlug(String slug) { this.slug = slug; }
     public String getStartTime() { return startTime; }
     public void setStartTime(String startTime) { this.startTime = startTime; }
     public String getEndTime() { return endTime; }
     public void setEndTime(String endTime) { this.endTime = endTime; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getCreatedAt() { return createdAt; } // Getter cho createdAt
+    public void setCreatedAt(String createdAt) { this.createdAt = createdAt; } // Setter cho createdAt
     public StoreService getStoreService() { return storeService; }
     public void setStoreService(StoreService storeService) { this.storeService = storeService; }
     public Employee getEmployee() { return employee; }

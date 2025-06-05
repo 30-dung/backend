@@ -21,6 +21,7 @@ public class ServiceService {
         service.setServiceName(request.getServiceName());
         service.setDescription(request.getDescription());
         service.setDurationMinutes(request.getDurationMinutes());
+        service.setServiceImg(request.getServiceImg());
         return serviceRepository.save(service);
     }
     @Transactional
