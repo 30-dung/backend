@@ -169,10 +169,15 @@ public class AppointmentController {
                         appointment.getStoreService().getService().getServiceName() : "Unknown Service";
             }
         }
+
         response.setStoreService(new AppointmentResponse.StoreService(storeName, serviceName));
         response.setEmployee(new AppointmentResponse.Employee(
                 appointment.getEmployee() != null && appointment.getEmployee().getFullName() != null ?
                         appointment.getEmployee().getFullName() : "Unknown Employee"
+        ));
+        response.setUser(new AppointmentResponse.User(
+                appointment.getUser() != null && appointment.getUser().getFullName() != null ?
+                        appointment.getUser().getFullName() : "Unknown User"
         ));
         response.setInvoice(new AppointmentResponse.Invoice(
                 appointment.getInvoice() != null && appointment.getInvoice().getTotalAmount() != null ?
