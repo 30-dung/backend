@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.List;
 
 @RestController
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"}, allowCredentials = "true")
 @RequestMapping("/api/employees")
 public class EmployeeController {
 
