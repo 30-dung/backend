@@ -10,7 +10,7 @@ public class AppointmentResponse {
     private StoreService storeService;
     private Employee employee;
     private Invoice invoice;
-
+    private User user; //thêm trường user
     // Nested classes
     public static class StoreService {
         private String storeName;
@@ -49,6 +49,24 @@ public class AppointmentResponse {
         public void setTotalAmount(double totalAmount) { this.totalAmount = totalAmount; }
     }
 
+    public static class User {
+        private String fullName;
+
+        // Constructor
+        public User(String fullName) {
+            this.fullName = fullName;
+        }
+        // Getter và Setter
+        public String getFullName() {
+            return fullName;
+        }
+
+        public void setFullName(String fullName) {
+            this.fullName = fullName;
+        }
+    }
+
+
     // Getters and Setters
     public Integer getAppointmentId() { return appointmentId; }
     public void setAppointmentId(Integer appointmentId) { this.appointmentId = appointmentId; }
@@ -68,4 +86,6 @@ public class AppointmentResponse {
     public void setEmployee(Employee employee) { this.employee = employee; }
     public Invoice getInvoice() { return invoice; }
     public void setInvoice(Invoice invoice) { this.invoice = invoice; }
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
 }

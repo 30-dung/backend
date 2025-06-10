@@ -32,4 +32,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
 
     @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
     Optional<Appointment> findBySlug(String slug);
+
+    // Thêm phương thức mới để lấy tất cả lịch hẹn của nhân viên
+    @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
+    List<Appointment> findByEmployeeOrderByCreatedAtDesc(Employee employee);
 }

@@ -2,8 +2,8 @@ package com.example.serversideclinet.service;
 
 import com.example.serversideclinet.dto.AppointmentRequest;
 import com.example.serversideclinet.model.*;
-import com.example.serversideclinet.repository.*;
-import com.example.serversideclinet.util.SlugGenerator;
+        import com.example.serversideclinet.repository.*;
+        import com.example.serversideclinet.util.SlugGenerator;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,7 +67,6 @@ public class AppointmentService {
         List<Appointment> createdAppointments = new ArrayList<>();
         BigDecimal totalAmount = BigDecimal.ZERO;
 
-        // Pre-validate all requests for conflicts
         for (int i = 0; i < requests.length; i++) {
             AppointmentRequest request = requests[i];
             logger.debug("Validating request {}: timeSlotId={}, storeServiceId={}, startTime={}, endTime={}",
@@ -94,7 +93,6 @@ public class AppointmentService {
                 throw new AppointmentException("Time slot is already booked for request " + i + " at " + startTime + " - " + endTime);
             }
 
-            // Create appointment object without saving
             Appointment appointment = new Appointment();
             appointment.setUser(user);
             appointment.setWorkingSlot(workingSlot);
@@ -106,19 +104,17 @@ public class AppointmentService {
             appointment.setStatus(Appointment.Status.PENDING);
             appointment.setCreatedAt(LocalDateTime.now());
             appointment.setReminderSent(false);
-            appointment.setSlug(generateUniqueSlug()); // Tạo slug duy nhất
+            appointment.setSlug(generateUniqueSlug());
 
             createdAppointments.add(appointment);
             totalAmount = totalAmount.add(storeService.getPrice());
         }
 
-        // Save all appointments if validation passes
         logger.info("All requests validated successfully. Saving {} appointments.", createdAppointments.size());
         for (Appointment appointment : createdAppointments) {
             appointmentRepository.save(appointment);
         }
 
-        // Create invoice
         logger.debug("Creating invoice for total amount: {}", totalAmount);
         Invoice invoice = new Invoice();
         invoice.setUser(user);
@@ -128,7 +124,6 @@ public class AppointmentService {
         invoice.setAppointments(createdAppointments);
         Invoice savedInvoice = invoiceRepository.save(invoice);
 
-        // Update appointments with invoice and create invoice details
         for (Appointment appointment : createdAppointments) {
             appointment.setInvoice(savedInvoice);
             appointmentRepository.save(appointment);
@@ -146,7 +141,6 @@ public class AppointmentService {
             invoiceDetailRepository.save(invoiceDetail);
         }
 
-        // Send emails after transaction completes
         logger.info("Sending email notifications for {} appointments.", createdAppointments.size());
         for (Appointment appointment : createdAppointments) {
             sendAppointmentNotificationToCustomer(appointment);
@@ -274,13 +268,13 @@ public class AppointmentService {
     public List<Appointment> getAppointmentsByUser(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new AppointmentException("User not found with email: " + email));
-        return appointmentRepository.findByUserOrderByCreatedAtDesc(user); // Sử dụng phương thức mới
+        return appointmentRepository.findByUserOrderByCreatedAtDesc(user);
     }
 
     public List<Appointment> getAppointmentsByEmployee(String email) {
         Employee employee = employeeRepository.findByEmail(email)
                 .orElseThrow(() -> new AppointmentException("Employee not found with email: " + email));
-        return appointmentRepository.findByEmployeeAndStatus(employee, Appointment.Status.PENDING);
+        return appointmentRepository.findByEmployeeOrderByCreatedAtDesc(employee); // Sửa đổi để lấy tất cả trạng thái
     }
 
     @Transactional
