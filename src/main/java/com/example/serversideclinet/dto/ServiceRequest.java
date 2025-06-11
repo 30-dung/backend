@@ -4,6 +4,7 @@ public class ServiceRequest {
     private String serviceName;
     private String description;
     private Short durationMinutes;
+    private String serviceImg;
 
     // Getters and setters
 
@@ -29,5 +30,13 @@ public class ServiceRequest {
 
     public void setDurationMinutes(Short durationMinutes) {
         this.durationMinutes = durationMinutes;
+    }
+
+    public String getServiceImg() {
+        return serviceImg;
+    }
+
+    public void setServiceImg(String serviceImg) {
+        this.serviceImg = serviceImg;
     }
 }

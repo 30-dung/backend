@@ -46,7 +46,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/employee/**").hasAnyRole("EMPLOYEE", "CUSTOMER")
                         .requestMatchers("/api/store/**").permitAll()
                         .requestMatchers("/api/reviews/**").permitAll()
-                        .requestMatchers("/api/appointments/**").hasRole("CUSTOMER")
+                        .requestMatchers("/api/appointments/**").hasAnyRole("CUSTOMER", "EMPLOYEE")
                         .requestMatchers("/api/services/**").hasAnyRole("ADMIN", "CUSTOMER")
                         .requestMatchers("/api/employees/store/**").hasAnyRole("ADMIN", "CUSTOMER")
 //                        .requestMatchers("/api/employee/working-time-slots/available/**").hasRole("CUSTOMER")
@@ -83,11 +83,12 @@ public class SecurityConfig {
         System.out.println("Configuring CORS Filter...");
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowCredentials(true);
-        config.addAllowedOrigin("http://localhost:5173");
-        config.addAllowedHeader("*");
-        config.addAllowedMethod("*");
-        source.registerCorsConfiguration("/**", config);
+        config.setAllowCredentials(true); // Cho phép gửi cookie hoặc thông tin xác thực
+        config.addAllowedOrigin("http://localhost:3000"); // Cho phép client
+        config.addAllowedOrigin("http://localhost:3001"); // Cho phép admin
+        config.addAllowedHeader("*"); // Cho phép tất cả header
+        config.addAllowedMethod("*"); // Cho phép tất cả phương thức HTTP (GET, POST, PUT, DELETE, v.v.)
+        source.registerCorsConfiguration("/**", config); // Áp dụng cho tất cả endpoint
         return new CorsFilter(source);
     }
 }

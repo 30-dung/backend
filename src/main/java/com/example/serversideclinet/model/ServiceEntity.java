@@ -17,8 +17,17 @@ public class ServiceEntity {
     @Column(nullable = false)
     private Short durationMinutes;
 
-    // Getters and Setters
+    private String serviceImg;
 
+
+
+// Getters and Setters
+    public String getServiceImg() {
+         return serviceImg;
+    }
+    public void setServiceImg(String serviceImg) {
+        this.serviceImg = serviceImg;
+    }
 
     public Integer getServiceId() {
         return serviceId;

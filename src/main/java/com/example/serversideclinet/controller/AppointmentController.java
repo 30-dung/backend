@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"}, allowCredentials = "true")
 @RequestMapping("/api/appointments")
 public class AppointmentController {
 
@@ -31,7 +31,8 @@ public class AppointmentController {
         String email = authentication.getName();
         try {
             List<Appointment> createdAppointments = appointmentService.createMultipleAppointments(requests, email);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdAppointments);
+            List<AppointmentResponse> responses = createdAppointments.stream().map(this::mapToAppointmentResponse).toList();
+            return ResponseEntity.status(HttpStatus.CREATED).body(responses);
         } catch (AppointmentService.AppointmentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
@@ -40,41 +41,28 @@ public class AppointmentController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Appointment>> getAllAppointments() {
+    public ResponseEntity<List<AppointmentResponse>> getAllAppointments() {
         List<Appointment> appointments = appointmentService.getAllAppointments();
-        return new ResponseEntity<>(appointments, HttpStatus.OK);
+        List<AppointmentResponse> responses = appointments.stream().map(this::mapToAppointmentResponse).toList();
+        return new ResponseEntity<>(responses, HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<AppointmentResponse> getAppointmentById(@PathVariable Integer id) {
         try {
             Appointment appointment = appointmentService.getAppointmentById(id);
-            AppointmentResponse response = new AppointmentResponse();
-            response.setAppointmentId(appointment.getAppointmentId());
-            response.setStartTime(appointment.getStartTime().toString());
-            response.setEndTime(appointment.getEndTime().toString());
-            response.setStatus(appointment.getStatus().toString());
-            String storeName = "Unknown Store";
-            String serviceName = "Unknown Service";
-            if (appointment.getStoreService() != null) {
-                if (appointment.getStoreService().getStore() != null) {
-                    storeName = appointment.getStoreService().getStore().getStoreName() != null ?
-                            appointment.getStoreService().getStore().getStoreName() : "Unknown Store";
-                }
-                if (appointment.getStoreService().getService() != null) {
-                    serviceName = appointment.getStoreService().getService().getServiceName() != null ?
-                            appointment.getStoreService().getService().getServiceName() : "Unknown Service";
-                }
-            }
-            response.setStoreService(new AppointmentResponse.StoreService(storeName, serviceName));
-            response.setEmployee(new AppointmentResponse.Employee(
-                    appointment.getEmployee() != null && appointment.getEmployee().getFullName() != null ?
-                            appointment.getEmployee().getFullName() : "Unknown Employee"
-            ));
-            response.setInvoice(new AppointmentResponse.Invoice(
-                    appointment.getInvoice() != null && appointment.getInvoice().getTotalAmount() != null ?
-                            appointment.getInvoice().getTotalAmount().doubleValue() : 0.0
-            ));
+            AppointmentResponse response = mapToAppointmentResponse(appointment);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (AppointmentService.AppointmentException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity<AppointmentResponse> getAppointmentBySlug(@PathVariable String slug) {
+        try {
+            Appointment appointment = appointmentService.getAppointmentBySlug(slug);
+            AppointmentResponse response = mapToAppointmentResponse(appointment);
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (AppointmentService.AppointmentException e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -87,7 +75,8 @@ public class AppointmentController {
         try {
             String email = authentication.getName();
             Appointment updatedAppointment = appointmentService.updateAppointment(id, request, email);
-            return new ResponseEntity<>(updatedAppointment, HttpStatus.OK);
+            AppointmentResponse response = mapToAppointmentResponse(updatedAppointment);
+            return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (AppointmentService.AppointmentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
@@ -110,20 +99,22 @@ public class AppointmentController {
     }
 
     @GetMapping("/user/{email}")
-    public ResponseEntity<List<Appointment>> getAppointmentsByUser(@PathVariable String email) {
+    public ResponseEntity<List<AppointmentResponse>> getAppointmentsByUser(@PathVariable String email) {
         try {
             List<Appointment> appointments = appointmentService.getAppointmentsByUser(email);
-            return new ResponseEntity<>(appointments, HttpStatus.OK);
+            List<AppointmentResponse> responses = appointments.stream().map(this::mapToAppointmentResponse).toList();
+            return new ResponseEntity<>(responses, HttpStatus.OK);
         } catch (AppointmentService.AppointmentException e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
 
     @GetMapping("/employee/{email}")
-    public ResponseEntity<List<Appointment>> getAppointmentsByEmployee(@PathVariable String email) {
+    public ResponseEntity<List<AppointmentResponse>> getAppointmentsByEmployee(@PathVariable String email) {
         try {
             List<Appointment> appointments = appointmentService.getAppointmentsByEmployee(email);
-            return new ResponseEntity<>(appointments, HttpStatus.OK);
+            List<AppointmentResponse> responses = appointments.stream().map(this::mapToAppointmentResponse).toList();
+            return new ResponseEntity<>(responses, HttpStatus.OK);
         } catch (AppointmentService.AppointmentException e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
@@ -134,7 +125,8 @@ public class AppointmentController {
     public ResponseEntity<?> confirmAppointment(@PathVariable Integer id) {
         try {
             Appointment appointment = appointmentService.confirmAppointment(id);
-            return new ResponseEntity<>(appointment, HttpStatus.OK);
+            AppointmentResponse response = mapToAppointmentResponse(appointment);
+            return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (AppointmentService.AppointmentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
@@ -148,11 +140,49 @@ public class AppointmentController {
         try {
             String email = authentication.getName();
             Appointment appointment = appointmentService.cancelAppointment(id, email);
-            return new ResponseEntity<>(appointment, HttpStatus.OK);
+            AppointmentResponse response = mapToAppointmentResponse(appointment);
+            return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (AppointmentService.AppointmentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi hệ thống: " + e.getMessage());
         }
+    }
+
+    private AppointmentResponse mapToAppointmentResponse(Appointment appointment) {
+        AppointmentResponse response = new AppointmentResponse();
+        response.setAppointmentId(appointment.getAppointmentId());
+        response.setSlug(appointment.getSlug());
+        response.setStartTime(appointment.getStartTime().toString());
+        response.setEndTime(appointment.getEndTime().toString());
+        response.setStatus(appointment.getStatus().toString());
+        response.setCreatedAt(appointment.getCreatedAt().toString()); // Thêm ánh xạ createdAt
+        String storeName = "Unknown Store";
+        String serviceName = "Unknown Service";
+        if (appointment.getStoreService() != null) {
+            if (appointment.getStoreService().getStore() != null) {
+                storeName = appointment.getStoreService().getStore().getStoreName() != null ?
+                        appointment.getStoreService().getStore().getStoreName() : "Unknown Store";
+            }
+            if (appointment.getStoreService().getService() != null) {
+                serviceName = appointment.getStoreService().getService().getServiceName() != null ?
+                        appointment.getStoreService().getService().getServiceName() : "Unknown Service";
+            }
+        }
+
+        response.setStoreService(new AppointmentResponse.StoreService(storeName, serviceName));
+        response.setEmployee(new AppointmentResponse.Employee(
+                appointment.getEmployee() != null && appointment.getEmployee().getFullName() != null ?
+                        appointment.getEmployee().getFullName() : "Unknown Employee"
+        ));
+        response.setUser(new AppointmentResponse.User(
+                appointment.getUser() != null && appointment.getUser().getFullName() != null ?
+                        appointment.getUser().getFullName() : "Unknown User"
+        ));
+        response.setInvoice(new AppointmentResponse.Invoice(
+                appointment.getInvoice() != null && appointment.getInvoice().getTotalAmount() != null ?
+                        appointment.getInvoice().getTotalAmount().doubleValue() : 0.0
+        ));
+        return response;
     }
 }

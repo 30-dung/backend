@@ -32,8 +32,8 @@
     import java.util.stream.Collectors;
 
     @RestController
+    @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"}, allowCredentials = "true")
     @RequestMapping("/api/auth")
-    @CrossOrigin(origins = "http://localhost:5173", allowedHeaders = "*", methods = {RequestMethod.POST, RequestMethod.GET, RequestMethod.OPTIONS})
     public class AuthController {
         @Autowired
         private AuthenticationManager authenticationManager;

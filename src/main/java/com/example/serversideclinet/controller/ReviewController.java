@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @RestController
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"}, allowCredentials = "true")
 @PreAuthorize("hasRole('CUSTOMER')") // Áp dụng cho tất cả các API bên dưới
 @RequestMapping("/api/reviews")
 public class ReviewController {

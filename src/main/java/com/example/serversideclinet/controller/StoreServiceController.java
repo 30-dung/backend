@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 
 @RestController
-@CrossOrigin
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"}, allowCredentials = "true")
 @RequestMapping("/api/admin/create/price/store")
 //@PreAuthorize("hasRole('ADMIN')")
 public class StoreServiceController {

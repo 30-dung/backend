@@ -38,6 +38,7 @@ public class StoreService {
             store.setOpeningTime(updatedStore.getOpeningTime());
             store.setClosingTime(updatedStore.getClosingTime());
             store.setDescription(updatedStore.getDescription());
+            store.setStoreImages(updatedStore.getStoreImages());
             store.setAverageRating(updatedStore.getAverageRating());
             return storeRepository.save(store);
         }).orElseThrow(() -> new EntityNotFoundException("Store not found with id: " + id));
