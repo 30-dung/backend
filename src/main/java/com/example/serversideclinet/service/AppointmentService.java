@@ -1,9 +1,10 @@
+
 package com.example.serversideclinet.service;
 
 import com.example.serversideclinet.dto.AppointmentRequest;
 import com.example.serversideclinet.model.*;
-        import com.example.serversideclinet.repository.*;
-        import com.example.serversideclinet.util.SlugGenerator;
+import com.example.serversideclinet.repository.*;
+import com.example.serversideclinet.util.SlugGenerator;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -274,16 +275,32 @@ public class AppointmentService {
     public List<Appointment> getAppointmentsByEmployee(String email) {
         Employee employee = employeeRepository.findByEmail(email)
                 .orElseThrow(() -> new AppointmentException("Employee not found with email: " + email));
-        return appointmentRepository.findByEmployeeOrderByCreatedAtDesc(employee); // Sửa đổi để lấy tất cả trạng thái
+        return appointmentRepository.findByEmployeeOrderByCreatedAtDesc(employee);
+    }
+
+    @Transactional
+    public Appointment completeAppointment(Integer id) {
+        Appointment appointment = getAppointmentById(id);
+        logger.debug("Đang cố gắng hoàn thành lịch hẹn ID {} với trạng thái: {}", id, appointment.getStatus());
+        if (appointment.getStatus() != Appointment.Status.CONFIRMED) {
+            logger.error("Không thể hoàn thành lịch hẹn ID {}: Trạng thái không hợp lệ {}", id, appointment.getStatus());
+            throw new AppointmentException("Chỉ có lịch hẹn ở trạng thái CONFIRMED mới có thể hoàn thành");
+        }
+        appointment.setStatus(Appointment.Status.COMPLETED);
+        logger.info("Hoàn thành lịch hẹn ID {} thành công", id);
+        return appointmentRepository.save(appointment);
     }
 
     @Transactional
     public Appointment confirmAppointment(Integer id) {
         Appointment appointment = getAppointmentById(id);
+        logger.debug("Đang cố gắng xác nhận lịch hẹn ID {} với trạng thái: {}", id, appointment.getStatus());
         if (appointment.getStatus() != Appointment.Status.PENDING) {
-            throw new AppointmentException("Only pending appointments can be confirmed");
+            logger.error("Không thể xác nhận lịch hẹn ID {}: Trạng thái không hợp lệ {}", id, appointment.getStatus());
+            throw new AppointmentException("Chỉ có lịch hẹn ở trạng thái PENDING mới có thể xác nhận");
         }
         appointment.setStatus(Appointment.Status.CONFIRMED);
+        logger.info("Xác nhận lịch hẹn ID {} thành công", id);
         return appointmentRepository.save(appointment);
     }
 
@@ -301,6 +318,7 @@ public class AppointmentService {
             throw new AppointmentException("Completed appointments cannot be canceled");
         }
         appointment.setStatus(Appointment.Status.CANCELED);
+        logger.info("Hủy lịch hẹn ID {} thành công", id);
         return appointmentRepository.save(appointment);
     }
 
