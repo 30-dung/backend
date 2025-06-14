@@ -22,7 +22,6 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class WorkingTimeSlotService {
@@ -97,12 +96,11 @@ public class WorkingTimeSlotService {
         Employee employee = employeeRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
-        if (!employee.getStore().getStoreId().equals(request.getStoreId())) {
-            throw new RuntimeException("Bạn không thể đăng ký thời gian làm việc cho cửa hàng khác nơi làm việc.");
+        // Sử dụng storeId của nhân viên, bỏ qua storeId từ request nếu có
+        Store store = employee.getStore();
+        if (store == null) {
+            throw new RuntimeException("Nhân viên chưa được gán cửa hàng.");
         }
-
-        Store store = storeRepository.findById(request.getStoreId())
-                .orElseThrow(() -> new RuntimeException("Store not found"));
 
         LocalDateTime start = request.getStartTime();
         LocalDateTime end = request.getEndTime();
@@ -146,6 +144,7 @@ public class WorkingTimeSlotService {
         Employee employee = employeeRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
-        return workingTimeSlotRepository.findByEmployeeOrderByStartTimeAsc(employee);
+        List<WorkingTimeSlot> slots = workingTimeSlotRepository.findByEmployeeOrderByStartTimeAsc(employee);
+        return slots;
     }
 }

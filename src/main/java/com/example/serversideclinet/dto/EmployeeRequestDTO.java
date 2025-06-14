@@ -28,7 +28,8 @@ public class EmployeeRequestDTO {
 
     private Gender gender;
     private LocalDate dateOfBirth;
-    @JsonFormat(pattern = "yyyy-MM-dd")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+
 
 
     private String specialization;

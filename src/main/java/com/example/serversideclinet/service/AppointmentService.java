@@ -338,6 +338,18 @@ public class AppointmentService {
     }
 
     @Transactional
+    public Appointment completeAppoinment (Integer id) {
+        Appointment appointment = getAppointmentById(id);
+        if (appointment.getStatus() != Appointment.Status.CONFIRMED) {
+            throw new AppointmentException("Only confimed appointments can be completed");
+        }
+
+        appointment.setStatus(Appointment.Status.COMPLETED);
+        Appointment savedAppointment = appointmentRepository.save(appointment);
+        return savedAppointment;
+    }
+
+    @Transactional
     public Appointment cancelAppointment(Integer id, String userEmail) {
         Appointment appointment = getAppointmentById(id);
         User user = userRepository.findByEmail(userEmail)

@@ -134,6 +134,20 @@ public class AppointmentController {
         }
     }
 
+    @PatchMapping("/{id}/complete")
+    @PreAuthorize("hasRole('EMPLOYEE')")
+    public ResponseEntity<?> completeAppointment(@PathVariable Integer id) {
+        try {
+            Appointment appointment = appointmentService.completeAppoinment(id);
+            AppointmentResponse response = mapToAppointmentResponse(appointment);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (AppointmentService.AppointmentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi hệ thống: " + e.getMessage());
+        }
+    }
+
     @PatchMapping("/{id}/cancel")
     @PreAuthorize("hasRole('CUSTOMER') or hasRole('EMPLOYEE')")
     public ResponseEntity<?> cancelAppointment(@PathVariable Integer id, Authentication authentication) {

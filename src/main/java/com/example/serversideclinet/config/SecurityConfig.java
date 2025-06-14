@@ -54,6 +54,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/appointments/**").hasAnyRole("CUSTOMER", "EMPLOYEE")
                         .requestMatchers("/api/services/**").hasAnyRole("ADMIN", "CUSTOMER")
                         .requestMatchers("/api/employees/store/**").hasAnyRole("ADMIN", "CUSTOMER")
+                        .requestMatchers("/api/working-time-slots/**").hasAnyRole("EMPLOYEE", "CUSTOMER")
 
                         // ✅ Cho phép preflight request từ trình duyệt
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
