@@ -47,14 +47,15 @@ public class SecurityConfig {
 
                         // ✅ Phân quyền các endpoint còn lại
                         .requestMatchers("/api/payment/**").hasRole("CUSTOMER")
-                        .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "EMPLOYEE")
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/employee/**").hasAnyRole("EMPLOYEE", "CUSTOMER")
                         .requestMatchers("/api/store/**").hasAnyRole("ADMIN", "CUSTOMER")
                         .requestMatchers("/api/reviews/**").permitAll()
-                        .requestMatchers("/api/appointments/**").hasAnyRole("CUSTOMER", "EMPLOYEE")
+                        .requestMatchers("/api/appointments/**").hasAnyRole("ADMIN", "CUSTOMER", "EMPLOYEE") // Thêm ROLE_ADMIN
                         .requestMatchers("/api/services/**").hasAnyRole("ADMIN", "CUSTOMER")
                         .requestMatchers("/api/employees/store/**").hasAnyRole("ADMIN", "CUSTOMER")
                         .requestMatchers("/api/working-time-slots/**").hasAnyRole("EMPLOYEE", "CUSTOMER")
+                        .requestMatchers("/api/salary/**").hasAnyRole("ADMIN", "EMPLOYEE") // Đảm bảo ADMIN có quyền
 
                         // ✅ Cho phép preflight request từ trình duyệt
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -95,8 +96,7 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
-        config.addAllowedOrigin("http://localhost:3000"); // client
-        config.addAllowedOrigin("http://localhost:3001"); // admin
+        config.addAllowedOriginPattern("*"); // Cho phép tất cả origin trong dev (thay bằng cụ thể trong prod)
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
         source.registerCorsConfiguration("/**", config);

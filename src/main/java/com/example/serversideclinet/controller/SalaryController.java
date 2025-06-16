@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -20,10 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/salary")
@@ -45,6 +43,7 @@ public class SalaryController {
     /**
      * Tự động tính lương cho tất cả appointments chưa được tính
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/process-unprocessed")
     public ResponseEntity<Map<String, Object>> processUnprocessedAppointments() {
         try {
@@ -67,6 +66,7 @@ public class SalaryController {
     /**
      * Tạo bảng lương cho nhân viên trong khoảng thời gian
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/generate-payroll")
     public ResponseEntity<Map<String, Object>> generatePayroll(
             @RequestParam Integer employeeId,
@@ -100,13 +100,15 @@ public class SalaryController {
         }
     }
 
+    /**
+     * Lấy bảng lương của nhân viên hiện tại theo tháng (cho nhân viên, không cần admin)
+     */
     @GetMapping("/my-payroll")
     public ResponseEntity<Map<String, Object>> getMyPayrollByMonth(
             @RequestParam int year,
             @RequestParam int month) {
 
         try {
-            // Lấy email từ token (SecurityContext)
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String email = authentication.getName();
 
@@ -120,7 +122,6 @@ public class SalaryController {
 
             Employee employee = employeeOpt.get();
 
-            // Xác định khoảng thời gian của tháng
             LocalDate startDate = LocalDate.of(year, month, 1);
             LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
 
@@ -148,6 +149,7 @@ public class SalaryController {
     /**
      * Lấy danh sách bảng lương theo tháng
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/payroll/monthly")
     public ResponseEntity<Map<String, Object>> getMonthlyPayrolls(
             @RequestParam int year,
@@ -191,6 +193,7 @@ public class SalaryController {
     /**
      * Duyệt bảng lương
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/approve/{payrollId}")
     public ResponseEntity<Map<String, Object>> approvePayroll(
             @PathVariable Integer payrollId,
@@ -225,6 +228,7 @@ public class SalaryController {
     /**
      * Đánh dấu đã trả lương
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/mark-paid/{payrollId}")
     public ResponseEntity<Map<String, Object>> markAsPaid(@PathVariable Integer payrollId) {
         try {
@@ -248,21 +252,19 @@ public class SalaryController {
     /**
      * Lấy danh sách tất cả nhân viên (để chọn trong dropdown)
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/employees")
     public ResponseEntity<Map<String, Object>> getAllEmployees() {
         try {
             List<Employee> employees = employeeRepository.findAll();
-
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("employees", employees);
-
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Lỗi lấy danh sách nhân viên: " + e.getMessage());
-
             return ResponseEntity.badRequest().body(response);
         }
     }
@@ -276,7 +278,6 @@ public class SalaryController {
             @RequestParam(defaultValue = "10") int size) {
 
         try {
-            // Lấy email từ SecurityContext (token đã xử lý sẵn)
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             String email = authentication.getName();
 
@@ -290,7 +291,6 @@ public class SalaryController {
 
             Employee employee = employeeOpt.get();
 
-            // ✅ FIXED: Sử dụng đúng Pageable từ Spring Data
             Pageable pageable = PageRequest.of(page, size, Sort.by("periodStartDate").descending());
             Page<PayrollSummary> payrollPage = payrollSummaryRepository.findByEmployee(employee, pageable);
 
@@ -313,6 +313,37 @@ public class SalaryController {
                     "success", false,
                     "message", "Lỗi lấy lịch sử bảng lương: " + e.getMessage()
             ));
+        }
+    }
+
+    // Tự động hóa tạo lương mọi nhân viên không phải chọn
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/generate-payrolls")
+    public ResponseEntity<Map<String, Object>> generatePayrollsForAllEmployees(
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+
+        try {
+            List<Employee> employees = employeeRepository.findAll();
+            List<PayrollSummary> payrollSummaries = new ArrayList<>();
+
+            for (Employee employee : employees) {
+                PayrollSummary payrollSummary = salaryService.generatePayrollSummary(employee, startDate, endDate);
+                payrollSummaries.add(payrollSummary);
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Tạo bảng lương cho tất cả nhân viên thành công");
+            response.put("payrollSummaries", payrollSummaries);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Lỗi tạo bảng lương: " + e.getMessage());
+
+            return ResponseEntity.badRequest().body(response);
         }
     }
 }
