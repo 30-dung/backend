@@ -33,12 +33,26 @@ public class SalaryService {
      */
     public SalaryRecord calculateSalaryForAppointment(Appointment appointment) {
         if (!appointment.canCalculateSalary()) {
-            throw new IllegalStateException("Appointment cannot be used for salary calculation");
+            throw new IllegalStateException("Appointment cannot be used for salary calculation: status=" + appointment.getStatus() + ", calculated=" + appointment.isSalaryCalculated());
         }
 
         Employee employee = appointment.getEmployee();
         StoreService storeService = appointment.getStoreService();
+
+        // Thêm kiểm tra null cho employee và storeService
+        if (employee == null) {
+            throw new IllegalStateException("Employee is null for appointment " + appointment.getAppointmentId());
+        }
+        if (storeService == null) {
+            throw new IllegalStateException("StoreService is null for appointment " + appointment.getAppointmentId());
+        }
+
         BigDecimal servicePrice = storeService.getPrice();
+
+        // Đảm bảo getCompletedAtLocal() không trả về null
+        if (appointment.getCompletedAtLocal() == null) { // <--- SỬA TẠI ĐÂY
+            throw new IllegalStateException("Completed date (completedAtLocal) is null for appointment " + appointment.getAppointmentId() + ". Ensure appointment was truly completed and saved.");
+        }
 
         // Tính hoa hồng
         BigDecimal commissionRate = employee.getCommissionRate();
@@ -52,7 +66,7 @@ public class SalaryService {
         salaryRecord.setServiceAmount(servicePrice);
         salaryRecord.setCommissionAmount(commissionAmount);
         salaryRecord.setCommissionRate(commissionRate);
-        salaryRecord.setWorkDate(appointment.getCompletedAt().toLocalDate());
+        salaryRecord.setWorkDate(appointment.getCompletedAtLocal().toLocalDate()); // <--- SỬA TẠI ĐÂY
         salaryRecord.setPaymentStatus(SalaryRecord.PaymentStatus.PENDING);
 
         // Lưu salary record
