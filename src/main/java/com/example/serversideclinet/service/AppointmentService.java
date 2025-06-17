@@ -5,14 +5,16 @@ import com.example.serversideclinet.model.*;
 import com.example.serversideclinet.repository.*;
 import com.example.serversideclinet.util.SlugGenerator;
 import jakarta.transaction.Transactional;
+import com.example.serversideclinet.model.Appointment.Status;
+import java.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -375,4 +377,37 @@ public class AppointmentService {
             super(message);
         }
     }
+
+    @Transactional
+    @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
+    public List<Appointment> filterAppointments(Status status, String employeeEmail, LocalDateTime startDate, LocalDateTime endDate) {
+        if (status == null && employeeEmail == null && startDate == null && endDate == null) {
+            return appointmentRepository.findAll();
+        }
+
+        Employee employee = employeeEmail != null
+                ? employeeRepository.findByEmail(employeeEmail)
+                .orElseThrow(() -> new AppointmentException("Employee not found with email: " + employeeEmail))
+                : null;
+
+        // ✅ CHUYỂN SANG LỌC THEO startTime
+        if (employee != null && status != null && startDate != null && endDate != null) {
+            return appointmentRepository.findByEmployeeAndStatusAndStartTimeBetween(employee, status, startDate, endDate);
+        } else if (employee != null && startDate != null && endDate != null) {
+            return appointmentRepository.findByEmployeeAndStartTimeBetween(employee, startDate, endDate);
+        } else if (employee != null && status != null) {
+            return appointmentRepository.findByEmployeeAndStatus(employee, status);
+        } else if (employee != null) {
+            return appointmentRepository.findByEmployeeOrderByStartTimeDesc(employee);
+        } else if (status != null && startDate != null && endDate != null) {
+            return appointmentRepository.findByStatusAndStartTimeBetween(status, startDate, endDate);
+        } else if (status != null) {
+            return appointmentRepository.findByStatus(status);
+        } else if (startDate != null && endDate != null) {
+            return appointmentRepository.findByStartTimeBetween(startDate, endDate);
+        }
+
+        return appointmentRepository.findAll();
+    }
+
 }

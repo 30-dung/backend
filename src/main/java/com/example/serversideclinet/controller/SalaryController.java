@@ -317,33 +317,33 @@ public class SalaryController {
     }
 
     // Tự động hóa tạo lương mọi nhân viên không phải chọn
-    @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/generate-payrolls")
-    public ResponseEntity<Map<String, Object>> generatePayrollsForAllEmployees(
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
-
-        try {
-            List<Employee> employees = employeeRepository.findAll();
-            List<PayrollSummary> payrollSummaries = new ArrayList<>();
-
-            for (Employee employee : employees) {
-                PayrollSummary payrollSummary = salaryService.generatePayrollSummary(employee, startDate, endDate);
-                payrollSummaries.add(payrollSummary);
-            }
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Tạo bảng lương cho tất cả nhân viên thành công");
-            response.put("payrollSummaries", payrollSummaries);
-
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "Lỗi tạo bảng lương: " + e.getMessage());
-
-            return ResponseEntity.badRequest().body(response);
-        }
-    }
+//    @PreAuthorize("hasRole('ADMIN')")
+//    @PostMapping("/generate-payrolls")
+//    public ResponseEntity<Map<String, Object>> generatePayrollsForAllEmployees(
+//            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+//            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+//
+//        try {
+//            List<Employee> employees = employeeRepository.findAll();
+//            List<PayrollSummary> payrollSummaries = new ArrayList<>();
+//
+//            for (Employee employee : employees) {
+//                PayrollSummary payrollSummary = salaryService.generatePayrollSummary(employee, startDate, endDate);
+//                payrollSummaries.add(payrollSummary);
+//            }
+//
+//            Map<String, Object> response = new HashMap<>();
+//            response.put("success", true);
+//            response.put("message", "Tạo bảng lương cho tất cả nhân viên thành công");
+//            response.put("payrollSummaries", payrollSummaries);
+//
+//            return ResponseEntity.ok(response);
+//        } catch (Exception e) {
+//            Map<String, Object> response = new HashMap<>();
+//            response.put("success", false);
+//            response.put("message", "Lỗi tạo bảng lương: " + e.getMessage());
+//
+//            return ResponseEntity.badRequest().body(response);
+//        }
+//    }
 }

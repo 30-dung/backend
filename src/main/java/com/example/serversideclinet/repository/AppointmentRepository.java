@@ -14,7 +14,7 @@ import java.util.Optional;
 
 public interface AppointmentRepository extends JpaRepository<Appointment, Integer> {
     @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
-    List<Appointment> findByUserOrderByCreatedAtDesc(User user); // Sửa đổi để sắp xếp theo createdAt giảm dần
+    List<Appointment> findByUserOrderByCreatedAtDesc(User user);
 
     List<Appointment> findByEmployeeAndStatus(Employee employee, Appointment.Status status);
 
@@ -33,9 +33,43 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
     @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
     Optional<Appointment> findBySlug(String slug);
 
-    // Thêm phương thức mới để lấy tất cả lịch hẹn của nhân viên
     @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
     List<Appointment> findByEmployeeOrderByCreatedAtDesc(Employee employee);
 
     List<Appointment> findByStatusAndSalaryCalculated(Appointment.Status status, boolean b);
+
+    List<Appointment> findByStatus(Appointment.Status status);
+
+    @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
+    List<Appointment> findByEmployeeAndStatusAndStartTimeBetween(Employee employee, Appointment.Status status, LocalDateTime start, LocalDateTime end);
+
+    @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
+    List<Appointment> findByStartTimeBetween(LocalDateTime start, LocalDateTime end);
+
+    @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
+    List<Appointment> findByStatusAndStartTimeBetween(Appointment.Status status, LocalDateTime start, LocalDateTime end);
+
+    @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
+    List<Appointment> findByEmployeeOrderByStartTimeDesc(Employee employee);
+
+    @Query("SELECT a FROM Appointment a " +
+            "WHERE (:status IS NULL OR a.status = :status) " +
+            "AND (:employeeEmail IS NULL OR a.employee.email = :employeeEmail) " +
+            "AND (:startDate IS NULL OR a.startTime >= :startDate) " +
+            "AND (:endDate IS NULL OR a.startTime <= :endDate)")
+    List<Appointment> findByFilters(
+            @Param("status") String status,
+            @Param("employeeEmail") String employeeEmail,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
+    @Query("SELECT a FROM Appointment a " +
+            "WHERE (:status IS NULL OR a.status = :status) " +
+            "AND (:employeeEmail IS NULL OR a.employee.email = :employeeEmail)")
+    List<Appointment> findByFilters(
+            @Param("status") String status,
+            @Param("employeeEmail") String employeeEmail
+    );
+
 }

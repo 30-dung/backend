@@ -11,6 +11,7 @@ import com.example.serversideclinet.service.EmployeeService;
 import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -74,6 +75,40 @@ public class EmployeeController {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin của nhân viên với ID: " + employeeId));
 
         return ResponseEntity.ok(employee);
+    }
+
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<EmployeeResponse>> getAllEmployees() {
+        List<Employee> employees = employeeService.getAllEmployees();
+        List<EmployeeResponse> responses = employees.stream()
+                .map(e -> new EmployeeResponse(e.getEmployeeId(), e.getFullName(), e.getEmail()))
+                .toList();
+        return new ResponseEntity<>(responses, HttpStatus.OK);
+    }
+
+    public static class EmployeeResponse {
+        private Integer employeeId;
+        private String fullName;
+        private String email;
+
+        public EmployeeResponse(Integer employeeId, String fullName, String email) {
+            this.employeeId = employeeId;
+            this.fullName = fullName;
+            this.email = email;
+        }
+
+        public Integer getEmployeeId() {
+            return employeeId;
+        }
+
+        public String getFullName() {
+            return fullName;
+        }
+
+        public String getEmail() {
+            return email;
+        }
     }
 
 }

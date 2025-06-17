@@ -3,7 +3,12 @@ package com.example.serversideclinet.controller;
 import com.example.serversideclinet.dto.AppointmentRequest;
 import com.example.serversideclinet.dto.AppointmentResponse;
 import com.example.serversideclinet.model.Appointment;
+import com.example.serversideclinet.model.Appointment.Status; // Thêm import này
 import com.example.serversideclinet.service.AppointmentService;
+import java.time.LocalDateTime; // Thêm import này
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat; // Thêm import này
 import com.example.serversideclinet.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -13,7 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
+@Slf4j
 @RestController
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"}, allowCredentials = "true")
 @RequestMapping("/api/appointments")
@@ -135,7 +140,7 @@ public class AppointmentController {
     }
 
     @PatchMapping("/{id}/complete")
-    @PreAuthorize("hasRole('EMPLOYEE')")
+    @PreAuthorize ("hasAnyRole('EMPLOYEE', 'ADMIN')")
     public ResponseEntity<?> completeAppointment(@PathVariable Integer id) {
         try {
             Appointment appointment = appointmentService.completeAppoinment(id);
@@ -198,5 +203,28 @@ public class AppointmentController {
                         appointment.getInvoice().getTotalAmount().doubleValue() : 0.0
         ));
         return response;
+    }
+
+    @GetMapping("/filter")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<AppointmentResponse>> filterAppointments(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String employeeEmail,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate
+    ) {
+        try {
+            Appointment.Status appointmentStatus = status != null && !status.equalsIgnoreCase("ALL") ?
+                    Appointment.Status.valueOf(status.toUpperCase()) : null;
+            List<Appointment> appointments = appointmentService.filterAppointments(appointmentStatus, employeeEmail, startDate, endDate);
+            log.info("Raw appointments from service: {}", appointments);
+            List<AppointmentResponse> responses = appointments.stream().map(this::mapToAppointmentResponse).toList();
+            log.info("Mapped responses: {}", responses);
+            return new ResponseEntity<>(responses, HttpStatus.OK);
+        } catch (AppointmentService.AppointmentException e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
 }
