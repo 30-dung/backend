@@ -18,7 +18,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
 
     List<Appointment> findByEmployeeAndStatus(Employee employee, Appointment.Status status);
 
-    List<Appointment> findByEmployeeAndStartTimeBetween(Employee employee, LocalDateTime startTime, LocalDateTime endTime);
+    @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
+    List<Appointment> findByEmployeeAndStartTimeBetween(Employee employee, LocalDateTime startTime, LocalDateTime endTime); // Đã có
 
     @Query("SELECT a FROM Appointment a WHERE a.employee = :employee " +
             "AND a.status != 'CANCELED' " +
@@ -50,8 +51,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
     List<Appointment> findByStatusAndStartTimeBetween(Appointment.Status status, LocalDateTime start, LocalDateTime end);
 
     @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
-    List<Appointment> findByEmployeeOrderByStartTimeDesc(Employee employee);
+    List<Appointment> findByEmployeeOrderByStartTimeDesc(Employee employee); // Dùng cho trường hợp chỉ lọc theo nhân viên, sắp xếp theo start time
 
+    // Giữ nguyên các query findByFilters cho ADMIN, không thay đổi
     @Query("SELECT a FROM Appointment a " +
             "WHERE (:status IS NULL OR a.status = :status) " +
             "AND (:employeeEmail IS NULL OR a.employee.email = :employeeEmail) " +

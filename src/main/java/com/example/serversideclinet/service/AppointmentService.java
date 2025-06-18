@@ -313,12 +313,26 @@ public class AppointmentService {
         return appointmentRepository.findByUserOrderByCreatedAtDesc(user);
     }
 
+    // Cập nhật phương thức này để nhận thêm các tham số lọc ngày
+    @Transactional // Thêm @Transactional nếu có các thao tác lazy loading hoặc tương tự
+    @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"}) // Giữ EntityGraph nếu cần fetch eager
+    public List<Appointment> getAppointmentsByEmployee(String employeeEmail, Status status, LocalDateTime startDate, LocalDateTime endDate) {
+        Employee employee = employeeRepository.findByEmail(employeeEmail)
+                .orElseThrow(() -> new AppointmentException("Employee not found with email: " + employeeEmail));
 
-    public List<Appointment> getAppointmentsByEmployee(String email) {
-        Employee employee = employeeRepository.findByEmail(email)
-                .orElseThrow(() -> new AppointmentException("Employee not found with email: " + email));
-        return appointmentRepository.findByEmployeeOrderByCreatedAtDesc(employee);
+        // Logic lọc tương tự như filterAppointments, nhưng luôn có employee
+        if (status != null && startDate != null && endDate != null) {
+            return appointmentRepository.findByEmployeeAndStatusAndStartTimeBetween(employee, status, startDate, endDate);
+        } else if (startDate != null && endDate != null) {
+            return appointmentRepository.findByEmployeeAndStartTimeBetween(employee, startDate, endDate);
+        } else if (status != null) {
+            return appointmentRepository.findByEmployeeAndStatus(employee, status);
+        } else {
+            // Trường hợp không có bộ lọc ngày hoặc trạng thái, chỉ lọc theo nhân viên
+            return appointmentRepository.findByEmployeeOrderByCreatedAtDesc(employee);
+        }
     }
+
 
     // UPDATED: Now sends confirmation email when confirming appointment
     @Transactional
@@ -378,6 +392,7 @@ public class AppointmentService {
         }
     }
 
+    // Giữ nguyên phương thức filterAppointments cho ADMIN, không thay đổi
     @Transactional
     @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
     public List<Appointment> filterAppointments(Status status, String employeeEmail, LocalDateTime startDate, LocalDateTime endDate) {
@@ -390,7 +405,9 @@ public class AppointmentService {
                 .orElseThrow(() -> new AppointmentException("Employee not found with email: " + employeeEmail))
                 : null;
 
-        // ✅ CHUYỂN SANG LỌC THEO startTime
+        // Logic lọc theo các kết hợp tham số
+        // Thứ tự ưu tiên: employee + status + time -> employee + time -> employee + status -> employee
+        // Sau đó đến: status + time -> status -> time -> all
         if (employee != null && status != null && startDate != null && endDate != null) {
             return appointmentRepository.findByEmployeeAndStatusAndStartTimeBetween(employee, status, startDate, endDate);
         } else if (employee != null && startDate != null && endDate != null) {
@@ -398,7 +415,7 @@ public class AppointmentService {
         } else if (employee != null && status != null) {
             return appointmentRepository.findByEmployeeAndStatus(employee, status);
         } else if (employee != null) {
-            return appointmentRepository.findByEmployeeOrderByStartTimeDesc(employee);
+            return appointmentRepository.findByEmployeeOrderByCreatedAtDesc(employee); // Hoặc findByEmployeeOrderByStartTimeDesc
         } else if (status != null && startDate != null && endDate != null) {
             return appointmentRepository.findByStatusAndStartTimeBetween(status, startDate, endDate);
         } else if (status != null) {

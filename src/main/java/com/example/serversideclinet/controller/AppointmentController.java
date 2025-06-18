@@ -115,9 +115,16 @@ public class AppointmentController {
     }
 
     @GetMapping("/employee/{email}")
-    public ResponseEntity<List<AppointmentResponse>> getAppointmentsByEmployee(@PathVariable String email) {
+    public ResponseEntity<List<AppointmentResponse>> getAppointmentsByEmployee(
+            @PathVariable String email,
+            @RequestParam(required = false) String status, // Thêm status filter
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate
+    ) {
         try {
-            List<Appointment> appointments = appointmentService.getAppointmentsByEmployee(email);
+            Appointment.Status appointmentStatus = status != null && !status.equalsIgnoreCase("ALL") ?
+                    Appointment.Status.valueOf(status.toUpperCase()) : null;
+            List<Appointment> appointments = appointmentService.getAppointmentsByEmployee(email, appointmentStatus, startDate, endDate);
             List<AppointmentResponse> responses = appointments.stream().map(this::mapToAppointmentResponse).toList();
             return new ResponseEntity<>(responses, HttpStatus.OK);
         } catch (AppointmentService.AppointmentException e) {
