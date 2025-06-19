@@ -1,40 +1,39 @@
+// src/main/java/com/example/serversideclinet/dto/AuthResponse.java
 package com.example.serversideclinet.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@NoArgsConstructor
 public class AuthResponse {
-    @JsonProperty("token")
     private String token;
-
-    @JsonProperty("role")
     private String role;
+    private Integer userId; // Đã có
+    private String fullName; // Đã có
+    private String message;
 
-    // Constructor
-    public AuthResponse(String token, String role) {
+    public AuthResponse(String token, String role, Integer userId, String fullName) {
         this.token = token;
         this.role = role;
+        this.userId = userId;
+        this.fullName = fullName;
+        this.message = null;
     }
 
-    // Getter và Setter
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
+    public AuthResponse(String token, String role, String message) {
         this.token = token;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    public void setRole(String role) {
         this.role = role;
+        this.userId = null;
+        this.fullName = null;
+        this.message = message;
     }
 
-    // toString để debug
-    @Override
-    public String toString() {
-        return "AuthResponse{token='" + token + "', role='" + role + "'}";
+    public AuthResponse(String message) {
+        this.token = null;
+        this.role = null;
+        this.userId = null;
+        this.fullName = null;
+        this.message = message;
     }
 }

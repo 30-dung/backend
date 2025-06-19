@@ -1,15 +1,16 @@
+// src/main/java/com/example/serversideclinet/controller/AppointmentController.java
 package com.example.serversideclinet.controller;
 
 import com.example.serversideclinet.dto.AppointmentRequest;
 import com.example.serversideclinet.dto.AppointmentResponse;
 import com.example.serversideclinet.model.Appointment;
-import com.example.serversideclinet.model.Appointment.Status; // Thêm import này
+import com.example.serversideclinet.model.Appointment.Status;
 import com.example.serversideclinet.service.AppointmentService;
-import java.time.LocalDateTime; // Thêm import này
+import com.example.serversideclinet.service.UserService;
+import java.time.LocalDateTime;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.format.annotation.DateTimeFormat; // Thêm import này
-import com.example.serversideclinet.service.UserService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,7 +27,6 @@ public class AppointmentController {
 
     @Autowired
     private AppointmentService appointmentService;
-
     @Autowired
     private UserService userService;
 
@@ -117,7 +117,7 @@ public class AppointmentController {
     @GetMapping("/employee/{email}")
     public ResponseEntity<List<AppointmentResponse>> getAppointmentsByEmployee(
             @PathVariable String email,
-            @RequestParam(required = false) String status, // Thêm status filter
+            @RequestParam(required = false) String status,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate
     ) {
@@ -182,11 +182,22 @@ public class AppointmentController {
         response.setStartTime(appointment.getStartTime().toString());
         response.setEndTime(appointment.getEndTime().toString());
         response.setStatus(appointment.getStatus().toString());
-        response.setCreatedAt(appointment.getCreatedAt().toString()); // Thêm ánh xạ createdAt
+        response.setCreatedAt(appointment.getCreatedAt().toString());
+
+        Integer storeId = null;
         String storeName = "Unknown Store";
+        Integer storeServiceId = null;
         String serviceName = "Unknown Service";
+        Integer employeeId = null;
+        String employeeName = "Unknown Employee";
+        Integer userId = null;
+        String userName = "Unknown User";
+        double totalAmount = 0.0;
+
         if (appointment.getStoreService() != null) {
+            storeServiceId = appointment.getStoreService().getStoreServiceId();
             if (appointment.getStoreService().getStore() != null) {
+                storeId = appointment.getStoreService().getStore().getStoreId();
                 storeName = appointment.getStoreService().getStore().getStoreName() != null ?
                         appointment.getStoreService().getStore().getStoreName() : "Unknown Store";
             }
@@ -196,19 +207,27 @@ public class AppointmentController {
             }
         }
 
-        response.setStoreService(new AppointmentResponse.StoreService(storeName, serviceName));
-        response.setEmployee(new AppointmentResponse.Employee(
-                appointment.getEmployee() != null && appointment.getEmployee().getFullName() != null ?
-                        appointment.getEmployee().getFullName() : "Unknown Employee"
-        ));
-        response.setUser(new AppointmentResponse.User(
-                appointment.getUser() != null && appointment.getUser().getFullName() != null ?
-                        appointment.getUser().getFullName() : "Unknown User"
-        ));
-        response.setInvoice(new AppointmentResponse.Invoice(
-                appointment.getInvoice() != null && appointment.getInvoice().getTotalAmount() != null ?
-                        appointment.getInvoice().getTotalAmount().doubleValue() : 0.0
-        ));
+        if (appointment.getEmployee() != null) {
+            employeeId = appointment.getEmployee().getEmployeeId();
+            employeeName = appointment.getEmployee().getFullName() != null ?
+                    appointment.getEmployee().getFullName() : "Unknown Employee";
+        }
+
+        if (appointment.getUser() != null) {
+            userId = appointment.getUser().getUserId();
+            userName = appointment.getUser().getFullName() != null ?
+                    appointment.getUser().getFullName() : "Unknown User";
+        }
+
+        if (appointment.getInvoice() != null && appointment.getInvoice().getTotalAmount() != null) {
+            totalAmount = appointment.getInvoice().getTotalAmount().doubleValue();
+        }
+
+        response.setStoreService(new AppointmentResponse.StoreServiceDetail(storeId, storeServiceId, storeName, serviceName));
+        response.setEmployee(new AppointmentResponse.EmployeeDetail(employeeId, employeeName));
+        response.setUser(new AppointmentResponse.UserDetail(userId, userName));
+        response.setInvoice(new AppointmentResponse.InvoiceDetailInfo(totalAmount));
+
         return response;
     }
 

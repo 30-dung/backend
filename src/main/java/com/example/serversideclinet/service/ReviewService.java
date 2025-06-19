@@ -1,105 +1,445 @@
+// src/main/java/com/example/serversideclinet/service/ReviewService.java
 package com.example.serversideclinet.service;
 
-import com.example.serversideclinet.dto.MultiReviewRequestDTO;
+import com.example.serversideclinet.dto.*;
 import com.example.serversideclinet.model.*;
 import com.example.serversideclinet.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.*;
-
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ReviewService {
 
+    private static final Logger logger = LoggerFactory.getLogger(ReviewService.class);
+
     @Autowired
     private ReviewRepository reviewRepository;
-
+    @Autowired
+    private ReviewReplyRepository reviewReplyRepository;
     @Autowired
     private UserRepository userRepository;
-
     @Autowired
-    private InvoiceRepository invoiceRepository;
-
+    private AppointmentRepository appointmentRepository;
     @Autowired
-    private InvoiceDetailRepository invoiceDetailRepository;
+    private StoreRepository storeRepository;
+    @Autowired
+    private EmployeeRepository employeeRepository;
+    @Autowired
+    private StoreServiceRepository storeServiceRepository;
+    @Autowired
+    private ServiceRepository serviceRepository;
 
+    @Transactional
+    public ReviewResponseDTO createReview(ReviewRequestDTO reviewRequest) {
+        logger.info("Received review request for appointment ID: {}, target ID: {}, target type: {}",
+                reviewRequest.getAppointmentId(), reviewRequest.getTargetId(), reviewRequest.getTargetType());
 
-    public List<Review> createMultiReviewsFromInvoice(MultiReviewRequestDTO request, User user) {
-        Integer invoiceId = request.getInvoiceId();
-        Invoice invoice = invoiceRepository.findById(invoiceId)
-                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+        Appointment appointment = appointmentRepository.findById(reviewRequest.getAppointmentId())
+                .orElseThrow(() -> new NoSuchElementException("Appointment not found with ID: " + reviewRequest.getAppointmentId()));
 
-        if (invoice.getStatus() != Invoice.InvoiceStatus.PAID) {
-            throw new RuntimeException("Invoice is not paid yet");
+        if (appointment.getStatus() != Appointment.Status.COMPLETED) {
+            throw new IllegalStateException("Only completed appointments can be reviewed.");
         }
 
-        List<Review> reviews = new ArrayList<>();
-        Set<Integer> reviewedStoreIds = new HashSet<>();
-        List<InvoiceDetail> details = invoiceDetailRepository.findByInvoiceInvoiceId(invoiceId);
+        User user = userRepository.findById(reviewRequest.getUserId())
+                .orElseThrow(() -> new NoSuchElementException("User not found with ID: " + reviewRequest.getUserId()));
 
-        for (InvoiceDetail detail : details) {
-            Appointment appointment = detail.getAppointment();
+        Review review;
+        Optional<Review> existingReviewOpt = reviewRepository.findByAppointmentAppointmentIdAndTargetIdAndTargetType(
+                reviewRequest.getAppointmentId(),
+                reviewRequest.getTargetId(),
+                reviewRequest.getTargetType()
+        );
 
-            // SERVICE review
-            Integer serviceId = appointment.getStoreService().getService().getServiceId();
-            if (!reviewRepository.existsByUserIdAndTargetTypeAndTargetId(user.getUserId(), ReviewTargetType.SERVICE, serviceId)) {
-                Review serviceReview = new Review();
-                serviceReview.setUser(user);
-                serviceReview.setTargetType(ReviewTargetType.SERVICE);
-                serviceReview.setTargetId(serviceId);
-                serviceReview.setRating(request.getServiceRating());
-                serviceReview.setComment(request.getComment());
-                serviceReview.setInvoiceDetail(detail);
-                reviews.add(reviewRepository.save(serviceReview));
-            }
-
-            // EMPLOYEE review
-            Integer employeeId = appointment.getEmployee().getEmployeeId();
-            if (!reviewRepository.existsByUserIdAndTargetTypeAndTargetId(user.getUserId(), ReviewTargetType.EMPLOYEE, employeeId)) {
-                Review employeeReview = new Review();
-                employeeReview.setUser(user);
-                employeeReview.setTargetType(ReviewTargetType.EMPLOYEE);
-                employeeReview.setTargetId(employeeId);
-                employeeReview.setRating(request.getEmployeeRating());
-                employeeReview.setComment(request.getComment());
-                employeeReview.setInvoiceDetail(detail);
-                reviews.add(reviewRepository.save(employeeReview));
-            }
-
-            // Lưu storeId để xử lý sau
-            reviewedStoreIds.add(appointment.getStoreService().getStore().getStoreId());
+        if (existingReviewOpt.isPresent()) {
+            review = existingReviewOpt.get();
+            review.setRating(reviewRequest.getRating());
+            review.setComment(reviewRequest.getComment());
+            logger.info("Updating existing review (ID: {}) for appointment ID: {}, target type: {}", review.getReviewId(), reviewRequest.getAppointmentId(), reviewRequest.getTargetType());
+        } else {
+            review = new Review();
+            review.setUser(user);
+            review.setAppointment(appointment);
+            review.setTargetId(reviewRequest.getTargetId());
+            review.setTargetType(reviewRequest.getTargetType());
+            review.setRating(reviewRequest.getRating());
+            review.setComment(reviewRequest.getComment());
+            review.setCreatedAt(LocalDateTime.now());
+            logger.info("Creating new review for appointment ID: {}, target type: {}", reviewRequest.getAppointmentId(), reviewRequest.getTargetType());
         }
 
-        // STORE review
-        for (Integer storeId : reviewedStoreIds) {
-            if (!reviewRepository.existsByUserIdAndTargetTypeAndTargetId(user.getUserId(), ReviewTargetType.STORE, storeId)) {
-                Review storeReview = new Review();
-                storeReview.setUser(user);
-                storeReview.setTargetType(ReviewTargetType.STORE);
-                storeReview.setTargetId(storeId);
-                storeReview.setRating(request.getStoreRating());
-                storeReview.setComment(request.getComment());
+        Review savedReview = reviewRepository.save(review);
+        logger.info("Review saved/updated to DB with ID: {}", savedReview.getReviewId());
 
-                // Tìm một invoiceDetail cùng store
-                InvoiceDetail anyDetailForStore = details.stream()
-                        .filter(d -> d.getAppointment().getStoreService().getStore().getStoreId().equals(storeId))
-                        .findFirst()
-                        .orElse(null);
-
-                storeReview.setInvoiceDetail(anyDetailForStore); // Optional
-                reviews.add(reviewRepository.save(storeReview));
+        try {
+            if (appointment.getStoreService() != null && appointment.getStoreService().getStore() != null) {
+                Integer storeId = appointment.getStoreService().getStore().getStoreId();
+                logger.debug("Attempting to update average rating for store ID: {}", storeId);
+                updateStoreAverageRating(storeId);
+                logger.debug("Successfully updated average rating for store ID: {}", storeId);
+            } else {
+                logger.warn("Could not find store service or store for appointment ID: {}. Skipping average rating update.", appointment.getAppointmentId());
             }
+        } catch (Exception e) {
+            logger.error("Error during store average rating update for appointment ID {}: {}", appointment.getAppointmentId(), e.getMessage(), e);
+            throw new RuntimeException("Failed to update store average rating: " + e.getMessage(), e);
         }
 
-
-        return reviews;
+        return convertToReviewResponseDTO(savedReview);
     }
 
+    @Transactional
+    public ReviewReplyResponseDTO addReplyToReview(ReviewReplyRequestDTO replyRequest) {
+        Review review = reviewRepository.findById(replyRequest.getReviewId())
+                .orElseThrow(() -> new NoSuchElementException("Review not found with ID: " + replyRequest.getReviewId()));
+        User user = userRepository.findById(replyRequest.getUserId())
+                .orElseThrow(() -> new NoSuchElementException("User not found with ID: " + replyRequest.getUserId()));
+
+        ReviewReply reply = new ReviewReply();
+        reply.setReview(review);
+        reply.setUser(user);
+        reply.setComment(replyRequest.getComment());
+        reply.setIsStoreReply(replyRequest.getIsStoreReply());
+
+        if (replyRequest.getParentReplyId() != null) {
+            ReviewReply parentReply = reviewReplyRepository.findById(replyRequest.getParentReplyId())
+                    .orElseThrow(() -> new NoSuchElementException("Parent reply not found with ID: " + replyRequest.getParentReplyId()));
+            reply.setParentReply(parentReply);
+        }
+
+        ReviewReply savedReply = reviewReplyRepository.save(reply);
+        return convertToReviewReplyResponseDTO(savedReply);
+    }
+
+    @Transactional
+    public Page<CombinedReviewDisplayDTO> getReviewsByStoreIdFiltered(
+            Integer storeId,
+            Integer employeeId,
+            Integer storeServiceId,
+            Integer rating,
+            Pageable pageable) {
+
+        Page<Review> filteredReviewsPage;
+        if (employeeId != null && rating != null) {
+            filteredReviewsPage = reviewRepository.findReviewsByStoreIdAndEmployeeIdAndRating(storeId, employeeId, rating, pageable);
+        } else if (employeeId != null) {
+            filteredReviewsPage = reviewRepository.findReviewsByStoreIdAndEmployeeId(storeId, employeeId, pageable);
+        } else if (storeServiceId != null && rating != null) {
+            filteredReviewsPage = reviewRepository.findReviewsByStoreIdAndStoreServiceIdAndRating(storeId, storeServiceId, rating, pageable);
+        } else if (storeServiceId != null) {
+            filteredReviewsPage = reviewRepository.findReviewsByStoreIdAndStoreServiceId(storeId, storeServiceId, pageable);
+        } else if (rating != null) {
+            filteredReviewsPage = reviewRepository.findReviewsByStoreIdAndRating(storeId, rating, pageable);
+        } else {
+            filteredReviewsPage = reviewRepository.findReviewsByStoreId(storeId, pageable);
+        }
+
+        List<Review> reviewsInCurrentPage = filteredReviewsPage.getContent();
+
+        Map<String, CombinedReviewDisplayDTO> combinedReviewsMap = new HashMap<>();
+
+        for (Review review : reviewsInCurrentPage) {
+            String key = review.getAppointment().getAppointmentId() + "_" + review.getUser().getUserId();
+
+            combinedReviewsMap.computeIfAbsent(key, k -> {
+                UserInfoDTO reviewerInfo = new UserInfoDTO();
+                reviewerInfo.setUserId(review.getUser().getUserId());
+                reviewerInfo.setFullName(review.getUser().getFullName());
+                reviewerInfo.setEmail(review.getUser().getEmail());
+
+                Store apptStore = (review.getAppointment().getStoreService() != null) ? review.getAppointment().getStoreService().getStore() : null;
+                Employee apptEmployee = review.getAppointment().getEmployee();
+                ServiceEntity apptService = (review.getAppointment().getStoreService() != null) ? review.getAppointment().getStoreService().getService() : null;
+
+                Integer mainReviewId = null;
+                if (review.getTargetType() == ReviewTargetType.STORE) {
+                    mainReviewId = review.getReviewId();
+                } else {
+                    mainReviewId = review.getReviewId();
+                }
+
+                return new CombinedReviewDisplayDTO(
+                        reviewerInfo,
+                        review.getAppointment().getAppointmentId(),
+                        review.getAppointment().getSlug(),
+                        apptStore != null ? apptStore.getStoreName() : "Unknown Store",
+                        apptStore != null ? apptStore.getStoreId() : null,
+                        apptEmployee != null ? apptEmployee.getFullName() : "Unknown Employee",
+                        apptEmployee != null ? apptEmployee.getEmployeeId() : null,
+                        apptService != null ? apptService.getServiceName() : "Unknown Service",
+                        (review.getAppointment().getStoreService() != null) ? review.getAppointment().getStoreService().getStoreServiceId() : null,
+                        review.getComment(),
+                        review.getCreatedAt(),
+                        new ArrayList<>(),
+                        mainReviewId
+                );
+            });
+
+            CombinedReviewDisplayDTO combinedDTO = combinedReviewsMap.get(key);
+
+            if (review.getTargetType() == ReviewTargetType.STORE && (combinedDTO.getMainReviewId() == null ||
+                    (reviewRepository.findById(combinedDTO.getMainReviewId()).isPresent() && reviewRepository.findById(combinedDTO.getMainReviewId()).get().getTargetType() != ReviewTargetType.STORE))) {
+                combinedDTO.setMainReviewId(review.getReviewId());
+            }
+
+            if (review.getTargetType() == ReviewTargetType.STORE) {
+                combinedDTO.setStoreRating(review.getRating());
+                if (review.getComment() != null && !review.getComment().isEmpty()) {
+                    combinedDTO.setComment(review.getComment());
+                }
+                if (review.getCreatedAt() != null && (combinedDTO.getCreatedAt() == null || review.getCreatedAt().isAfter(combinedDTO.getCreatedAt()))) {
+                    combinedDTO.setCreatedAt(review.getCreatedAt());
+                }
+            } else if (review.getTargetType() == ReviewTargetType.EMPLOYEE) {
+                combinedDTO.setEmployeeRating(review.getRating());
+            } else if (review.getTargetType() == ReviewTargetType.STORE_SERVICE) {
+                combinedDTO.setServiceRating(review.getRating());
+            }
+
+            if(review.getReviewId() != null) {
+                List<ReviewReply> rootRepliesForThisReview = reviewReplyRepository.findByReviewReviewIdAndParentReplyIsNullOrderByCreatedAtAsc(review.getReviewId());
+                List<ReviewReplyResponseDTO> tree = buildReplyTree(rootRepliesForThisReview);
+                combinedDTO.getReplies().addAll(tree);
+            }
+        }
+
+        List<CombinedReviewDisplayDTO> combinedReviewsList = new ArrayList<>(combinedReviewsMap.values());
+        combinedReviewsList.sort(Comparator.comparing(CombinedReviewDisplayDTO::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())));
+
+        return new PageImpl<>(combinedReviewsList, pageable, filteredReviewsPage.getTotalElements());
+    }
+
+    public OverallRatingDTO getOverallStoreRatings(Integer storeId) {
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new NoSuchElementException("Store not found with ID: " + storeId));
+
+        OverallRatingDTO overallRatingDTO = new OverallRatingDTO();
+        overallRatingDTO.setStoreId(store.getStoreId());
+        overallRatingDTO.setStoreName(store.getStoreName());
+        overallRatingDTO.setStoreImageUrl(store.getStoreImages()); // GÁN HÌNH ẢNH STORE
+
+        List<Review> allStoreReviews = reviewRepository.findReviewsByStoreId(storeId, Pageable.unpaged()).getContent();
+        long totalReviewsCount = allStoreReviews.size();
+        double averageRatingValue = totalReviewsCount > 0 ?
+                allStoreReviews.stream().mapToDouble(Review::getRating).average().orElse(0.0) : 0.0;
 
 
-    public User findUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+        overallRatingDTO.setTotalReviews(totalReviewsCount);
+        overallRatingDTO.setAverageRating(BigDecimal.valueOf(averageRatingValue));
+
+        Map<Integer, Long> ratingDistribution = reviewRepository.getRatingDistributionForStore(storeId).stream()
+                .collect(Collectors.toMap(
+                        arr -> (Integer) arr[0],
+                        arr -> (Long) arr[1]
+                ));
+        overallRatingDTO.setRatingDistribution(ratingDistribution);
+
+        List<EmployeeRatingSummaryDTO> employeeSummaries = reviewRepository.findReviewedEmployeeIdsByStoreId(storeId).stream()
+                .map(empId -> {
+                    Employee employee = employeeRepository.findById(empId).orElse(null);
+                    if (employee != null) {
+                        BigDecimal avg = BigDecimal.valueOf(reviewRepository.calculateAverageRatingForTarget(empId, ReviewTargetType.EMPLOYEE).orElse(0.0));
+                        Long totalRev = reviewRepository.countReviewsForTarget(empId, ReviewTargetType.EMPLOYEE);
+                        EmployeeRatingSummaryDTO dto = new EmployeeRatingSummaryDTO();
+                        dto.setEmployeeId(employee.getEmployeeId());
+                        dto.setEmployeeName(employee.getFullName());
+                        dto.setAverageRating(avg);
+                        dto.setTotalReviews(totalRev);
+                        dto.setAvatarUrl(employee.getAvatarUrl());
+                        return dto;
+                    }
+                    return null;
+                })
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toList());
+        overallRatingDTO.setEmployeeRatings(employeeSummaries);
+
+        List<ServiceRatingSummaryDTO> serviceSummaries = reviewRepository.findReviewedStoreServiceIdsByStoreId(storeId).stream() // Đổi tên biến
+                .map(ssId -> {
+                    com.example.serversideclinet.model.StoreService storeService = storeServiceRepository.findById(ssId).orElse(null);
+                    if (storeService != null) {
+                        ServiceEntity serviceEntity = storeService.getService();
+                        BigDecimal avg = BigDecimal.valueOf(reviewRepository.calculateAverageRatingForTarget(ssId, ReviewTargetType.STORE_SERVICE).orElse(0.0));
+                        Long totalRev = reviewRepository.countReviewsForTarget(ssId, ReviewTargetType.STORE_SERVICE);
+                        ServiceRatingSummaryDTO dto = new ServiceRatingSummaryDTO();
+                        dto.setServiceId(serviceEntity.getServiceId());
+                        dto.setServiceName(serviceEntity.getServiceName());
+                        dto.setAverageRating(avg);
+                        dto.setTotalReviews(totalRev);
+                        dto.setServiceImg(serviceEntity.getServiceImg());
+                        return dto;
+                    }
+                    return null;
+                })
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toList());
+        overallRatingDTO.setServiceRatings(serviceSummaries);
+
+        return overallRatingDTO;
+    }
+
+    public ReviewResponseDTO getReviewById(Integer reviewId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new NoSuchElementException("Review not found with ID: " + reviewId));
+        return convertToReviewResponseDTO(review);
+    }
+
+    public boolean checkIfAppointmentReviewed(Integer appointmentId) {
+        return reviewRepository.existsByAppointmentAppointmentId(appointmentId);
+    }
+
+    private ReviewResponseDTO convertToReviewResponseDTO(Review review) {
+        ReviewResponseDTO dto = new ReviewResponseDTO();
+        dto.setReviewId(review.getReviewId());
+
+        UserInfoDTO reviewerInfo = new UserInfoDTO();
+        reviewerInfo.setUserId(review.getUser().getUserId());
+        reviewerInfo.setFullName(review.getUser().getFullName());
+        reviewerInfo.setEmail(review.getUser().getEmail());
+        dto.setReviewer(reviewerInfo);
+
+        dto.setAppointmentId(review.getAppointment().getAppointmentId());
+        dto.setTargetId(review.getTargetId());
+        dto.setTargetType(review.getTargetType());
+        dto.setRating(review.getRating());
+        dto.setComment(review.getComment());
+        dto.setCreatedAt(review.getCreatedAt());
+
+        Store store = (review.getAppointment() != null && review.getAppointment().getStoreService() != null) ?
+                review.getAppointment().getStoreService().getStore() : null;
+        if (store != null) {
+            dto.setStoreName(store.getStoreName());
+            dto.setStoreId(store.getStoreId());
+        }
+
+        switch (review.getTargetType()) {
+            case STORE:
+                if (store != null) {
+                    dto.setTargetName(store.getStoreName());
+                } else {
+                    dto.setTargetName("Unknown Store");
+                }
+                break;
+            case EMPLOYEE:
+                Employee employee = (review.getAppointment() != null) ? review.getAppointment().getEmployee() : null;
+                if (employee != null) {
+                    dto.setTargetName(employee.getFullName());
+                    dto.setEmployeeName(employee.getFullName());
+                } else {
+                    dto.setTargetName("Unknown Employee");
+                }
+                break;
+            case STORE_SERVICE:
+                com.example.serversideclinet.model.StoreService storeService =
+                        (review.getAppointment() != null) ? review.getAppointment().getStoreService() : null;
+                if (storeService != null && storeService.getService() != null) {
+                    dto.setTargetName(storeService.getService().getServiceName());
+                    dto.setServiceName(storeService.getService().getServiceName());
+                } else {
+                    dto.setTargetName("Unknown Service");
+                }
+                break;
+            case SERVICE:
+                ServiceEntity serviceEntity = serviceRepository.findById(review.getTargetId()).orElse(null);
+                if (serviceEntity != null) {
+                    dto.setTargetName(serviceEntity.getServiceName());
+                    dto.setServiceName(serviceEntity.getServiceName());
+                } else {
+                    dto.setTargetName("Unknown Service (generic)");
+                }
+                break;
+        }
+
+        if (review.getReplies() != null && !review.getReplies().isEmpty()) {
+            dto.setReplies(review.getReplies().stream()
+                    .map(this::convertToReviewReplyResponseDTO)
+                    .collect(Collectors.toList()));
+        } else {
+            dto.setReplies(Collections.emptyList());
+        }
+
+        return dto;
+    }
+
+    private ReviewReplyResponseDTO convertToReviewReplyResponseDTO(ReviewReply reply) {
+        ReviewReplyResponseDTO dto = new ReviewReplyResponseDTO();
+        dto.setReplyId(reply.getReplyId());
+        dto.setReviewId(reply.getReview().getReviewId());
+
+        UserInfoDTO replierInfo = new UserInfoDTO();
+        replierInfo.setUserId(reply.getUser().getUserId());
+        replierInfo.setFullName(reply.getUser().getFullName());
+        replierInfo.setEmail(reply.getUser().getEmail());
+        dto.setReplier(replierInfo);
+
+        dto.setComment(reply.getComment());
+        dto.setCreatedAt(reply.getCreatedAt());
+        dto.setIsStoreReply(reply.getIsStoreReply());
+        dto.setParentReplyId(reply.getParentReply() != null ? reply.getParentReply().getReplyId() : null);
+
+        if (reply.getChildrenReplies() != null && !reply.getChildrenReplies().isEmpty()) {
+            dto.setChildrenReplies(reply.getChildrenReplies().stream()
+                    .map(this::convertToReviewReplyResponseDTO)
+                    .collect(Collectors.toList()));
+        } else {
+            dto.setChildrenReplies(Collections.emptyList());
+        }
+
+        return dto;
+    }
+
+    private List<ReviewReplyResponseDTO> buildReplyTree(List<ReviewReply> rootReplies) {
+        Map<Integer, ReviewReplyResponseDTO> replyMap = rootReplies.stream()
+                .map(this::convertToReviewReplyResponseDTO)
+                .collect(Collectors.toMap(ReviewReplyResponseDTO::getReplyId, dto -> dto));
+
+        List<ReviewReplyResponseDTO> result = new ArrayList<>();
+
+        for (ReviewReplyResponseDTO replyDTO : replyMap.values()) {
+            if (replyDTO.getParentReplyId() == null || !replyMap.containsKey(replyDTO.getParentReplyId())) {
+                result.add(replyDTO);
+            } else {
+                ReviewReplyResponseDTO parent = replyMap.get(replyDTO.getParentReplyId());
+                if (parent != null) {
+                    if (parent.getChildrenReplies() == null) {
+                        parent.setChildrenReplies(new ArrayList<>());
+                    }
+                    parent.getChildrenReplies().add(replyDTO);
+                }
+            }
+        }
+        result.sort(Comparator.comparing(ReviewReplyResponseDTO::getCreatedAt));
+
+        return result;
+    }
+
+    private void updateStoreAverageRating(Integer storeId) {
+        storeRepository.findById(storeId).ifPresent(store -> {
+            List<Review> allReviewsForStore = reviewRepository.findReviewsByStoreId(storeId, Pageable.unpaged()).getContent();
+            double averageRating = allReviewsForStore.stream()
+                    .mapToDouble(Review::getRating)
+                    .average()
+                    .orElse(0.0);
+            store.setAverageRating(BigDecimal.valueOf(averageRating));
+            storeRepository.save(store);
+        });
     }
 }
