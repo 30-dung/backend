@@ -51,7 +51,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/employee/**").hasAnyRole("EMPLOYEE", "CUSTOMER")
                         .requestMatchers("/api/store/**").hasAnyRole("ADMIN", "CUSTOMER")
                         .requestMatchers("/api/reviews/**").permitAll()
-                        .requestMatchers("/api/appointments/**").hasAnyRole("ADMIN", "CUSTOMER", "EMPLOYEE") // Thêm ROLE_ADMIN
+                        .requestMatchers("/api/appointments/**").hasAnyRole("ADMIN", "CUSTOMER", "EMPLOYEE")
+                        .requestMatchers("/api/user/**").hasAnyRole("ADMIN", "CUSTOMER" , "EMPLOYEE")
                         .requestMatchers("/api/services/**").hasAnyRole("ADMIN", "CUSTOMER")
                         .requestMatchers("/api/employees/store/**").hasAnyRole("ADMIN", "CUSTOMER")
                         .requestMatchers("/api/working-time-slots/**").hasAnyRole("EMPLOYEE", "CUSTOMER")

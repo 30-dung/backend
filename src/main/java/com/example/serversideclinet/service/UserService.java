@@ -1,3 +1,4 @@
+// src/main/java/com/example/serversideclinet/service/UserService.java
 package com.example.serversideclinet.service;
 
 import com.example.serversideclinet.model.User;
@@ -31,6 +32,13 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    // New method for admin to get user by ID
+    public Optional<User> getUserById(Integer id) {
+        return userRepository.findById(id);
+    }
 
-
+    // New method for admin to delete user by ID
+    public void deleteUser(Integer id) {
+        userRepository.deleteById(id);
+    }
 }
