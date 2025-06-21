@@ -2,6 +2,8 @@ package com.example.serversideclinet.controller;
 
 import com.example.serversideclinet.dto.AppointmentStatusResponseDTO;
 import com.example.serversideclinet.dto.EmployeeRequestDTO;
+import com.example.serversideclinet.dto.EmployeeProfileUpdateDTO; // Import
+import com.example.serversideclinet.dto.PasswordUpdateDTO; // Import
 import com.example.serversideclinet.dto.PendingAppointmentDTO;
 import com.example.serversideclinet.model.Appointment;
 import com.example.serversideclinet.model.Employee;
@@ -87,6 +89,28 @@ public class EmployeeController {
         return new ResponseEntity<>(responses, HttpStatus.OK);
     }
 
+    // Endpoint để nhân viên cập nhật thông tin cá nhân
+    @PutMapping("/update-profile")
+    @PreAuthorize("hasRole('EMPLOYEE')")
+    public ResponseEntity<Employee> updateEmployeeProfile(
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            @Valid @RequestBody EmployeeProfileUpdateDTO updateDTO) {
+        Integer employeeId = currentUser.getEmployeeId();
+        Employee updatedEmployee = employeeService.updateEmployeeProfile(employeeId, updateDTO);
+        return ResponseEntity.ok(updatedEmployee);
+    }
+
+    // Endpoint để nhân viên cập nhật mật khẩu
+    @PutMapping("/update-profile/password")
+    @PreAuthorize("hasRole('EMPLOYEE')")
+    public ResponseEntity<String> updateEmployeePassword(
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            @Valid @RequestBody PasswordUpdateDTO passwordUpdateDTO) {
+        Integer employeeId = currentUser.getEmployeeId();
+        employeeService.updateEmployeePassword(employeeId, passwordUpdateDTO);
+        return ResponseEntity.ok("Cập nhật mật khẩu thành công.");
+    }
+
     public static class EmployeeResponse {
         private Integer employeeId;
         private String fullName;
@@ -110,6 +134,4 @@ public class EmployeeController {
             return email;
         }
     }
-
 }
-

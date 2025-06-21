@@ -2,6 +2,8 @@ package com.example.serversideclinet.service;
 
 import com.example.serversideclinet.dto.AppointmentStatusResponseDTO;
 import com.example.serversideclinet.dto.EmployeeRequestDTO;
+import com.example.serversideclinet.dto.EmployeeProfileUpdateDTO; // Import
+import com.example.serversideclinet.dto.PasswordUpdateDTO; // Import
 import com.example.serversideclinet.dto.PendingAppointmentDTO;
 import com.example.serversideclinet.model.Appointment;
 import com.example.serversideclinet.model.Employee;
@@ -223,5 +225,72 @@ public class EmployeeService {
 
     public List<Employee> getEmployeesByStore(Integer storeId) {
         return employeeRepository.findByStoreStoreId(storeId);
+    }
+
+    /**
+     * Cập nhật thông tin cá nhân của nhân viên.
+     * Cho phép nhân viên sửa đổi fullName, email, phoneNumber, gender, dateOfBirth, specialization, avatarUrl.
+     *
+     * @param employeeId ID của nhân viên cần cập nhật.
+     * @param updateDTO DTO chứa thông tin mới.
+     * @return Đối tượng Employee sau khi cập nhật.
+     */
+    @Transactional
+    public Employee updateEmployeeProfile(Integer employeeId, EmployeeProfileUpdateDTO updateDTO) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên với ID: " + employeeId));
+
+        // Kiểm tra email trùng lặp (nếu email được cập nhật và khác email hiện tại của nhân viên)
+        if (!employee.getEmail().equals(updateDTO.getEmail()) && employeeRepository.existsByEmail(updateDTO.getEmail())) {
+            throw new IllegalArgumentException("Email đã được sử dụng bởi người dùng khác.");
+        }
+
+        // Kiểm tra số điện thoại trùng lặp (nếu số điện thoại được cập nhật và khác số điện thoại hiện tại của nhân viên)
+        if (!employee.getPhoneNumber().equals(updateDTO.getPhoneNumber()) && employeeRepository.existsByPhoneNumber(updateDTO.getPhoneNumber())) {
+            throw new IllegalArgumentException("Số điện thoại đã được sử dụng bởi người dùng khác.");
+        }
+
+        employee.setFullName(updateDTO.getFullName());
+        employee.setEmail(updateDTO.getEmail());
+        employee.setPhoneNumber(updateDTO.getPhoneNumber());
+        employee.setGender(updateDTO.getGender());
+        if (updateDTO.getDateOfBirth() != null) {
+            employee.setDateOfBirth(updateDTO.getDateOfBirth().atStartOfDay());
+        }
+        employee.setSpecialization(updateDTO.getSpecialization());
+        employee.setAvatarUrl(updateDTO.getAvatarUrl());
+        employee.setUpdatedAt(LocalDateTime.now());
+
+        return employeeRepository.save(employee);
+    }
+
+    /**
+     * Cập nhật mật khẩu của nhân viên.
+     * Yêu cầu nhập mật khẩu hiện tại, mật khẩu mới và xác nhận mật khẩu mới.
+     *
+     * @param employeeId ID của nhân viên.
+     * @param passwordUpdateDTO DTO chứa mật khẩu hiện tại, mật khẩu mới và xác nhận mật khẩu mới.
+     * @return Đối tượng Employee sau khi cập nhật mật khẩu.
+     */
+    @Transactional
+    public Employee updateEmployeePassword(Integer employeeId, PasswordUpdateDTO passwordUpdateDTO) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên với ID: " + employeeId));
+
+        // 1. Kiểm tra mật khẩu hiện tại có đúng không
+        if (!passwordEncoder.matches(passwordUpdateDTO.getCurrentPassword(), employee.getPassword())) {
+            throw new IllegalArgumentException("Mật khẩu hiện tại không chính xác.");
+        }
+
+        // 2. Kiểm tra mật khẩu mới và xác nhận mật khẩu mới có khớp nhau không
+        if (!passwordUpdateDTO.getNewPassword().equals(passwordUpdateDTO.getConfirmNewPassword())) {
+            throw new IllegalArgumentException("Mật khẩu mới và xác nhận mật khẩu mới không khớp.");
+        }
+
+        // 3. Mã hóa và lưu mật khẩu mới
+        employee.setPassword(passwordEncoder.encode(passwordUpdateDTO.getNewPassword()));
+        employee.setUpdatedAt(LocalDateTime.now());
+
+        return employeeRepository.save(employee);
     }
 }
