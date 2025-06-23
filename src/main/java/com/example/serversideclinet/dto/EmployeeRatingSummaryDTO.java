@@ -1,4 +1,3 @@
-// src/main/java/com/example/serversideclinet/dto/EmployeeRatingSummaryDTO.java
 package com.example.serversideclinet.dto;
 
 import lombok.Data;

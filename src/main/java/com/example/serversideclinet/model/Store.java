@@ -16,7 +16,6 @@ public class Store {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer storeId;
-
     @Column(nullable = false)
     private String storeName;
     @Column(nullable = false)
@@ -32,6 +31,11 @@ public class Store {
 
     @Column(columnDefinition = "DECIMAL(3,2) default 0.00")
     private BigDecimal averageRating = BigDecimal.ZERO;
+
+    // THÊM TRƯỜNG TOTAL_REVIEWS CHO STORE VÀO ĐÂY
+    @Column(columnDefinition = "BIGINT default 0")
+    private Long totalReviews = 0L;
+    // KẾT THÚC THÊM TRƯỜNG
 
     @CreationTimestamp
     private LocalDateTime createdAt;
@@ -107,6 +111,16 @@ public class Store {
     public void setAverageRating(BigDecimal averageRating) {
         this.averageRating = averageRating;
     }
+
+    // THÊM GETTER VÀ SETTER CHO totalReviews CỦA STORE VÀO ĐÂY
+    public Long getTotalReviews() {
+        return totalReviews;
+    }
+
+    public void setTotalReviews(Long totalReviews) {
+        this.totalReviews = totalReviews;
+    }
+    // KẾT THÚC THÊM GETTER VÀ SETTER
 
     public LocalDateTime getCreatedAt() {
         return createdAt;

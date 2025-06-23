@@ -1,4 +1,3 @@
-// src/main/java/com/example/serversideclinet/controller/ReviewController.java
 package com.example.serversideclinet.controller;
 
 import com.example.serversideclinet.dto.*;
@@ -21,7 +20,6 @@ public class ReviewController {
 
     @Autowired
     private ReviewService reviewService;
-
     // API: Gửi đánh giá mới (dùng sau khi lịch hẹn COMPLETED)
     // POST /api/reviews
     @PostMapping

@@ -1,4 +1,3 @@
-// src/main/java/com/example/serversideclinet/service/ReviewService.java
 package com.example.serversideclinet.service;
 
 import com.example.serversideclinet.dto.*;
@@ -29,7 +28,6 @@ import java.util.stream.Collectors;
 public class ReviewService {
 
     private static final Logger logger = LoggerFactory.getLogger(ReviewService.class);
-
     @Autowired
     private ReviewRepository reviewRepository;
     @Autowired
@@ -51,24 +49,20 @@ public class ReviewService {
     public ReviewResponseDTO createReview(ReviewRequestDTO reviewRequest) {
         logger.info("Received review request for appointment ID: {}, target ID: {}, target type: {}",
                 reviewRequest.getAppointmentId(), reviewRequest.getTargetId(), reviewRequest.getTargetType());
-
         Appointment appointment = appointmentRepository.findById(reviewRequest.getAppointmentId())
                 .orElseThrow(() -> new NoSuchElementException("Appointment not found with ID: " + reviewRequest.getAppointmentId()));
-
         if (appointment.getStatus() != Appointment.Status.COMPLETED) {
             throw new IllegalStateException("Only completed appointments can be reviewed.");
         }
 
         User user = userRepository.findById(reviewRequest.getUserId())
                 .orElseThrow(() -> new NoSuchElementException("User not found with ID: " + reviewRequest.getUserId()));
-
         Review review;
         Optional<Review> existingReviewOpt = reviewRepository.findByAppointmentAppointmentIdAndTargetIdAndTargetType(
                 reviewRequest.getAppointmentId(),
                 reviewRequest.getTargetId(),
                 reviewRequest.getTargetType()
         );
-
         if (existingReviewOpt.isPresent()) {
             review = existingReviewOpt.get();
             review.setRating(reviewRequest.getRating());
@@ -88,7 +82,6 @@ public class ReviewService {
 
         Review savedReview = reviewRepository.save(review);
         logger.info("Review saved/updated to DB with ID: {}", savedReview.getReviewId());
-
         try {
             if (appointment.getStoreService() != null && appointment.getStoreService().getStore() != null) {
                 Integer storeId = appointment.getStoreService().getStore().getStoreId();
@@ -96,11 +89,28 @@ public class ReviewService {
                 updateStoreAverageRating(storeId);
                 logger.debug("Successfully updated average rating for store ID: {}", storeId);
             } else {
-                logger.warn("Could not find store service or store for appointment ID: {}. Skipping average rating update.", appointment.getAppointmentId());
+                logger.warn("Could not find store service or store for appointment ID: {}. Skipping store average rating update.", appointment.getAppointmentId());
             }
+
+            // THÊM CÁC DÒNG NÀY ĐỂ CẬP NHẬT RATING CHO EMPLOYEE VÀ STORE_SERVICE VÀO ĐÂY
+            // Cập nhật rating cho Employee
+            if (reviewRequest.getTargetType() == ReviewTargetType.EMPLOYEE && reviewRequest.getTargetId() != null) {
+                logger.debug("Attempting to update average rating for employee ID: {}", reviewRequest.getTargetId());
+                updateEmployeeAverageRating(reviewRequest.getTargetId());
+                logger.debug("Successfully updated average rating for employee ID: {}", reviewRequest.getTargetId());
+            }
+
+            // Cập nhật rating cho StoreService
+            if (reviewRequest.getTargetType() == ReviewTargetType.STORE_SERVICE && reviewRequest.getTargetId() != null) {
+                logger.debug("Attempting to update average rating for store service ID: {}", reviewRequest.getTargetId());
+                updateStoreServiceAverageRating(reviewRequest.getTargetId());
+                logger.debug("Successfully updated average rating for store service ID: {}", reviewRequest.getTargetId());
+            }
+            // KẾT THÚC THÊM CÁC DÒNG NÀY
+
         } catch (Exception e) {
-            logger.error("Error during store average rating update for appointment ID {}: {}", appointment.getAppointmentId(), e.getMessage(), e);
-            throw new RuntimeException("Failed to update store average rating: " + e.getMessage(), e);
+            logger.error("Error during average rating update for appointment ID {}: {}", appointment.getAppointmentId(), e.getMessage(), e);
+            throw new RuntimeException("Failed to update average rating: " + e.getMessage(), e);
         }
 
         return convertToReviewResponseDTO(savedReview);
@@ -112,7 +122,6 @@ public class ReviewService {
                 .orElseThrow(() -> new NoSuchElementException("Review not found with ID: " + replyRequest.getReviewId()));
         User user = userRepository.findById(replyRequest.getUserId())
                 .orElseThrow(() -> new NoSuchElementException("User not found with ID: " + replyRequest.getUserId()));
-
         ReviewReply reply = new ReviewReply();
         reply.setReview(review);
         reply.setUser(user);
@@ -155,10 +164,8 @@ public class ReviewService {
         List<Review> reviewsInCurrentPage = filteredReviewsPage.getContent();
 
         Map<String, CombinedReviewDisplayDTO> combinedReviewsMap = new HashMap<>();
-
         for (Review review : reviewsInCurrentPage) {
             String key = review.getAppointment().getAppointmentId() + "_" + review.getUser().getUserId();
-
             combinedReviewsMap.computeIfAbsent(key, k -> {
                 UserInfoDTO reviewerInfo = new UserInfoDTO();
                 reviewerInfo.setUserId(review.getUser().getUserId());
@@ -166,6 +173,7 @@ public class ReviewService {
                 reviewerInfo.setEmail(review.getUser().getEmail());
 
                 Store apptStore = (review.getAppointment().getStoreService() != null) ? review.getAppointment().getStoreService().getStore() : null;
+
                 Employee apptEmployee = review.getAppointment().getEmployee();
                 ServiceEntity apptService = (review.getAppointment().getStoreService() != null) ? review.getAppointment().getStoreService().getService() : null;
 
@@ -192,7 +200,6 @@ public class ReviewService {
                         mainReviewId
                 );
             });
-
             CombinedReviewDisplayDTO combinedDTO = combinedReviewsMap.get(key);
 
             if (review.getTargetType() == ReviewTargetType.STORE && (combinedDTO.getMainReviewId() == null ||
@@ -230,21 +237,17 @@ public class ReviewService {
     public OverallRatingDTO getOverallStoreRatings(Integer storeId) {
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new NoSuchElementException("Store not found with ID: " + storeId));
-
         OverallRatingDTO overallRatingDTO = new OverallRatingDTO();
         overallRatingDTO.setStoreId(store.getStoreId());
         overallRatingDTO.setStoreName(store.getStoreName());
         overallRatingDTO.setStoreImageUrl(store.getStoreImages()); // GÁN HÌNH ẢNH STORE
 
-        List<Review> allStoreReviews = reviewRepository.findReviewsByStoreId(storeId, Pageable.unpaged()).getContent();
-        long totalReviewsCount = allStoreReviews.size();
-        double averageRatingValue = totalReviewsCount > 0 ?
-                allStoreReviews.stream().mapToDouble(Review::getRating).average().orElse(0.0) : 0.0;
+        // SỬA ĐOẠN NÀY: Lấy tổng số reviews và rating trung bình từ Store entity
+        overallRatingDTO.setTotalReviews(store.getTotalReviews());
+        overallRatingDTO.setAverageRating(store.getAverageRating());
+        // KẾT THÚC SỬA
 
-
-        overallRatingDTO.setTotalReviews(totalReviewsCount);
-        overallRatingDTO.setAverageRating(BigDecimal.valueOf(averageRatingValue));
-
+        // Lấy phân phối sao từ reviews của Store (phần này giữ nguyên)
         Map<Integer, Long> ratingDistribution = reviewRepository.getRatingDistributionForStore(storeId).stream()
                 .collect(Collectors.toMap(
                         arr -> (Integer) arr[0],
@@ -252,46 +255,38 @@ public class ReviewService {
                 ));
         overallRatingDTO.setRatingDistribution(ratingDistribution);
 
-        List<EmployeeRatingSummaryDTO> employeeSummaries = reviewRepository.findReviewedEmployeeIdsByStoreId(storeId).stream()
-                .map(empId -> {
-                    Employee employee = employeeRepository.findById(empId).orElse(null);
-                    if (employee != null) {
-                        BigDecimal avg = BigDecimal.valueOf(reviewRepository.calculateAverageRatingForTarget(empId, ReviewTargetType.EMPLOYEE).orElse(0.0));
-                        Long totalRev = reviewRepository.countReviewsForTarget(empId, ReviewTargetType.EMPLOYEE);
-                        EmployeeRatingSummaryDTO dto = new EmployeeRatingSummaryDTO();
-                        dto.setEmployeeId(employee.getEmployeeId());
-                        dto.setEmployeeName(employee.getFullName());
-                        dto.setAverageRating(avg);
-                        dto.setTotalReviews(totalRev);
-                        dto.setAvatarUrl(employee.getAvatarUrl());
-                        return dto;
-                    }
-                    return null;
+        // SỬA ĐOẠN NÀY: Lấy thông tin nhân viên và rating của họ từ Employee entity
+        List<EmployeeRatingSummaryDTO> employeeSummaries = employeeRepository.findByStoreStoreId(storeId).stream() // Lấy tất cả nhân viên của cửa hàng
+                .filter(employee -> employee.getTotalReviews() > 0) // Chỉ những nhân viên có đánh giá
+                .map(employee -> {
+                    EmployeeRatingSummaryDTO dto = new EmployeeRatingSummaryDTO();
+                    dto.setEmployeeId(employee.getEmployeeId());
+                    dto.setEmployeeName(employee.getFullName());
+                    dto.setAverageRating(employee.getAverageRating()); // Lấy từ Employee entity
+                    dto.setTotalReviews(employee.getTotalReviews()); // Lấy từ Employee entity
+                    dto.setAvatarUrl(employee.getAvatarUrl());
+                    return dto;
                 })
-                .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toList());
         overallRatingDTO.setEmployeeRatings(employeeSummaries);
+        // KẾT THÚC SỬA
 
-        List<ServiceRatingSummaryDTO> serviceSummaries = reviewRepository.findReviewedStoreServiceIdsByStoreId(storeId).stream() // Đổi tên biến
-                .map(ssId -> {
-                    com.example.serversideclinet.model.StoreService storeService = storeServiceRepository.findById(ssId).orElse(null);
-                    if (storeService != null) {
-                        ServiceEntity serviceEntity = storeService.getService();
-                        BigDecimal avg = BigDecimal.valueOf(reviewRepository.calculateAverageRatingForTarget(ssId, ReviewTargetType.STORE_SERVICE).orElse(0.0));
-                        Long totalRev = reviewRepository.countReviewsForTarget(ssId, ReviewTargetType.STORE_SERVICE);
-                        ServiceRatingSummaryDTO dto = new ServiceRatingSummaryDTO();
-                        dto.setServiceId(serviceEntity.getServiceId());
-                        dto.setServiceName(serviceEntity.getServiceName());
-                        dto.setAverageRating(avg);
-                        dto.setTotalReviews(totalRev);
-                        dto.setServiceImg(serviceEntity.getServiceImg());
-                        return dto;
-                    }
-                    return null;
+        // SỬA ĐOẠN NÀY: Lấy thông tin dịch vụ và rating của họ từ StoreService entity
+        List<ServiceRatingSummaryDTO> serviceSummaries = storeServiceRepository.findByStoreStoreId(storeId).stream() // Lấy tất cả dịch vụ của cửa hàng
+                .filter(storeService -> storeService.getTotalReviews() > 0) // Chỉ những dịch vụ có đánh giá
+                .map(storeService -> {
+                    ServiceEntity serviceEntity = storeService.getService();
+                    ServiceRatingSummaryDTO dto = new ServiceRatingSummaryDTO();
+                    dto.setServiceId(serviceEntity.getServiceId());
+                    dto.setServiceName(serviceEntity.getServiceName());
+                    dto.setAverageRating(storeService.getAverageRating()); // Lấy từ StoreService entity
+                    dto.setTotalReviews(storeService.getTotalReviews()); // Lấy từ StoreService entity
+                    dto.setServiceImg(serviceEntity.getServiceImg());
+                    return dto;
                 })
-                .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toList());
         overallRatingDTO.setServiceRatings(serviceSummaries);
+        // KẾT THÚC SỬA
 
         return overallRatingDTO;
     }
@@ -322,7 +317,6 @@ public class ReviewService {
         dto.setRating(review.getRating());
         dto.setComment(review.getComment());
         dto.setCreatedAt(review.getCreatedAt());
-
         Store store = (review.getAppointment() != null && review.getAppointment().getStoreService() != null) ?
                 review.getAppointment().getStoreService().getStore() : null;
         if (store != null) {
@@ -339,7 +333,8 @@ public class ReviewService {
                 }
                 break;
             case EMPLOYEE:
-                Employee employee = (review.getAppointment() != null) ? review.getAppointment().getEmployee() : null;
+                Employee employee = (review.getAppointment() != null) ?
+                        review.getAppointment().getEmployee() : null;
                 if (employee != null) {
                     dto.setTargetName(employee.getFullName());
                     dto.setEmployeeName(employee.getFullName());
@@ -349,7 +344,8 @@ public class ReviewService {
                 break;
             case STORE_SERVICE:
                 com.example.serversideclinet.model.StoreService storeService =
-                        (review.getAppointment() != null) ? review.getAppointment().getStoreService() : null;
+                        (review.getAppointment() != null) ?
+                                review.getAppointment().getStoreService() : null;
                 if (storeService != null && storeService.getService() != null) {
                     dto.setTargetName(storeService.getService().getServiceName());
                     dto.setServiceName(storeService.getService().getServiceName());
@@ -410,7 +406,6 @@ public class ReviewService {
         Map<Integer, ReviewReplyResponseDTO> replyMap = rootReplies.stream()
                 .map(this::convertToReviewReplyResponseDTO)
                 .collect(Collectors.toMap(ReviewReplyResponseDTO::getReplyId, dto -> dto));
-
         List<ReviewReplyResponseDTO> result = new ArrayList<>();
 
         for (ReviewReplyResponseDTO replyDTO : replyMap.values()) {
@@ -427,19 +422,53 @@ public class ReviewService {
             }
         }
         result.sort(Comparator.comparing(ReviewReplyResponseDTO::getCreatedAt));
-
         return result;
     }
 
     private void updateStoreAverageRating(Integer storeId) {
         storeRepository.findById(storeId).ifPresent(store -> {
-            List<Review> allReviewsForStore = reviewRepository.findReviewsByStoreId(storeId, Pageable.unpaged()).getContent();
-            double averageRating = allReviewsForStore.stream()
-                    .mapToDouble(Review::getRating)
-                    .average()
-                    .orElse(0.0);
+            List<Review> allReviewsForStore = reviewRepository.findAllByStoreIdAndTargetType(storeId, ReviewTargetType.STORE);
+            long totalReviews = allReviewsForStore.size();
+            double averageRating = totalReviews > 0 ?
+                    allReviewsForStore.stream()
+                            .mapToDouble(Review::getRating)
+                            .average()
+                            .orElse(0.0) : 0.0;
             store.setAverageRating(BigDecimal.valueOf(averageRating));
+            store.setTotalReviews(totalReviews); // Cập nhật totalReviews vào Store entity
             storeRepository.save(store);
         });
     }
+
+    // THÊM CÁC PHƯƠNG THỨC NÀY VÀO ĐÂY
+    private void updateEmployeeAverageRating(Integer employeeId) {
+        employeeRepository.findById(employeeId).ifPresent(employee -> {
+            List<Review> allReviewsForEmployee = reviewRepository.findAllByTargetIdAndTargetType(employeeId, ReviewTargetType.EMPLOYEE);
+            long totalReviews = allReviewsForEmployee.size();
+            double averageRating = totalReviews > 0 ?
+                    allReviewsForEmployee.stream()
+                            .mapToDouble(Review::getRating)
+                            .average()
+                            .orElse(0.0) : 0.0;
+            employee.setAverageRating(BigDecimal.valueOf(averageRating));
+            employee.setTotalReviews(totalReviews);
+            employeeRepository.save(employee);
+        });
+    }
+
+    private void updateStoreServiceAverageRating(Integer storeServiceId) {
+        storeServiceRepository.findById(storeServiceId).ifPresent(storeService -> {
+            List<Review> allReviewsForStoreService = reviewRepository.findAllByTargetIdAndTargetType(storeServiceId, ReviewTargetType.STORE_SERVICE);
+            long totalReviews = allReviewsForStoreService.size();
+            double averageRating = totalReviews > 0 ?
+                    allReviewsForStoreService.stream()
+                            .mapToDouble(Review::getRating)
+                            .average()
+                            .orElse(0.0) : 0.0;
+            storeService.setAverageRating(BigDecimal.valueOf(averageRating));
+            storeService.setTotalReviews(totalReviews);
+            storeServiceRepository.save(storeService);
+        });
+    }
+    // KẾT THÚC THÊM CÁC PHƯƠNG THỨC NÀY
 }

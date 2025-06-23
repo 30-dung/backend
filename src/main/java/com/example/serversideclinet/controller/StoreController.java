@@ -38,7 +38,7 @@ public class StoreController {
     }
 
 
-    @PreAuthorize("hasRole('ADMIN')")
+
     @GetMapping("/all")
     public ResponseEntity<List<Store>> getAllStores() {
         return ResponseEntity.ok(storeService.getAllStores());

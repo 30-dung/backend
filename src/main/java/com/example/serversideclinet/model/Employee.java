@@ -65,6 +65,14 @@ public class Employee {
     @Column(nullable = false, columnDefinition = "BOOLEAN default TRUE")
     private Boolean isActive = true;
 
+    // THÊM TRƯỜNG AVERAGE_RATING VÀ TOTAL_REVIEWS CHO EMPLOYEE VÀO ĐÂY
+    @Column(columnDefinition = "DECIMAL(3,2) default 0.00")
+    private BigDecimal averageRating = BigDecimal.ZERO;
+
+    @Column(columnDefinition = "BIGINT default 0")
+    private Long totalReviews = 0L;
+    // KẾT THÚC THÊM TRƯỜNG
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -206,6 +214,24 @@ public class Employee {
     public void setActive(Boolean active) {
         isActive = active;
     }
+
+    // THÊM GETTERS VÀ SETTERS CHO CÁC TRƯỜNG AVERAGE_RATING VÀ TOTAL_REVIEWS VÀO ĐÂY
+    public BigDecimal getAverageRating() {
+        return averageRating;
+    }
+
+    public void setAverageRating(BigDecimal averageRating) {
+        this.averageRating = averageRating;
+    }
+
+    public Long getTotalReviews() {
+        return totalReviews;
+    }
+
+    public void setTotalReviews(Long totalReviews) {
+        this.totalReviews = totalReviews;
+    }
+    // KẾT THÚC THÊM GETTERS VÀ SETTERS
 
     public LocalDateTime getCreatedAt() {
         return createdAt;

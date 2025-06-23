@@ -11,7 +11,6 @@ import java.util.Optional;
 public interface StoreServiceRepository extends JpaRepository<StoreService, Integer> {
 
     List<StoreService> findByStoreStoreId(Integer storeId);
-
-    // Phương thức mới: Tìm StoreService dựa trên storeId và serviceId để kiểm tra trùng lặp
+    // Phương thức hiện có: Tìm StoreService dựa trên storeId và serviceId để kiểm tra trùng lặp
     Optional<StoreService> findByStoreStoreIdAndServiceServiceId(Integer storeId, Integer serviceId);
 }
