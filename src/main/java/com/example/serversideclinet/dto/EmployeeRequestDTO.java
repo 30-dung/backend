@@ -1,9 +1,13 @@
+// Trong EmployeeRequestDTO.java
+
 package com.example.serversideclinet.dto;
 
+import com.example.serversideclinet.model.Employee; // Import Employee để sử dụng SalaryType
 import com.example.serversideclinet.model.Gender;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.*;
 
+import java.math.BigDecimal; // Import BigDecimal
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -16,11 +20,7 @@ public class EmployeeRequestDTO {
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
     private String email;
-    @NotBlank(message = "Password is required")
-    @Pattern(
-            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$",
-            message = "Password must be at least 8 characters, include uppercase, lowercase, number, and special character"
-    )
+
     private String password;
     @NotBlank(message = "Phone number is required")
     @Pattern(regexp = "^\\d{10}$", message = "Phone number must be 10 digits")
@@ -31,7 +31,6 @@ public class EmployeeRequestDTO {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
 
 
-
     private String specialization;
 
     private Integer storeId;
@@ -39,6 +38,18 @@ public class EmployeeRequestDTO {
     private Set<Integer> roleIds;
 
     private String avatarUrl;
+
+    @NotNull(message = "Base salary is required")
+    @DecimalMin(value = "0.00", message = "Base salary must be non-negative")
+    private BigDecimal baseSalary;
+
+    @NotNull(message = "Commission rate is required")
+    @DecimalMin(value = "0.0000", message = "Commission rate must be non-negative")
+    @DecimalMax(value = "1.0000", message = "Commission rate cannot exceed 1.0000 (100%)")
+    private BigDecimal commissionRate;
+
+    @NotNull(message = "Salary type is required")
+    private Employee.SalaryType salaryType;
 
     public String getEmployeeCode() {
         return employeeCode;
@@ -127,5 +138,29 @@ public class EmployeeRequestDTO {
     public void setAvatarUrl(String avatarUrl) {
         this.avatarUrl = avatarUrl;
     }
-}
 
+
+    public BigDecimal getBaseSalary() {
+        return baseSalary;
+    }
+
+    public void setBaseSalary(BigDecimal baseSalary) {
+        this.baseSalary = baseSalary;
+    }
+
+    public BigDecimal getCommissionRate() {
+        return commissionRate;
+    }
+
+    public void setCommissionRate(BigDecimal commissionRate) {
+        this.commissionRate = commissionRate;
+    }
+
+    public Employee.SalaryType getSalaryType() {
+        return salaryType;
+    }
+
+    public void setSalaryType(Employee.SalaryType salaryType) {
+        this.salaryType = salaryType;
+    }
+}

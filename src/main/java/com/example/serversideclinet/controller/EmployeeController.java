@@ -111,6 +111,16 @@ public class EmployeeController {
         return ResponseEntity.ok("Cập nhật mật khẩu thành công.");
     }
 
+    //cái này cho admin update nhơ thông tin của nv
+    @PutMapping("/admin/update/{employeeId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Employee> adminUpdateEmployee(
+            @PathVariable Integer employeeId,
+            @Valid @RequestBody EmployeeRequestDTO updateDTO) { // Sử dụng EmployeeRequestDTO
+        Employee updatedEmployee = employeeService.adminUpdateEmployee(employeeId, updateDTO);
+        return ResponseEntity.ok(updatedEmployee);
+    }
+
     public static class EmployeeResponse {
         private Integer employeeId;
         private String fullName;

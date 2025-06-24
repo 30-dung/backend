@@ -293,4 +293,95 @@ public class EmployeeService {
 
         return employeeRepository.save(employee);
     }
+
+
+    @Transactional
+    public Employee adminUpdateEmployee(Integer employeeId, EmployeeRequestDTO updateDTO) { // Sử dụng EmployeeRequestDTO
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên với ID: " + employeeId));
+
+        // Kiểm tra email trùng lặp (nếu email được cập nhật và khác email hiện tại của nhân viên)
+        if (!employee.getEmail().equals(updateDTO.getEmail()) && employeeRepository.existsByEmail(updateDTO.getEmail())) {
+            throw new IllegalArgumentException("Email đã được sử dụng bởi người dùng khác.");
+        }
+
+        // Kiểm tra số điện thoại trùng lặp (nếu số điện thoại được cập nhật và khác số điện thoại hiện tại của nhân viên)
+        if (!employee.getPhoneNumber().equals(updateDTO.getPhoneNumber()) && employeeRepository.existsByPhoneNumber(updateDTO.getPhoneNumber())) {
+            throw new IllegalArgumentException("Số điện thoại đã được sử dụng bởi người dùng khác.");
+        }
+
+        // Kiểm tra và cập nhật Store nếu có thay đổi
+        if (updateDTO.getStoreId() != null && !employee.getStore().getStoreId().equals(updateDTO.getStoreId())) {
+            Store newStore = storeRepository.findById(updateDTO.getStoreId())
+                    .orElseThrow(() -> new RuntimeException("Store mới không tồn tại"));
+            employee.setStore(newStore);
+        }
+
+        // Kiểm tra và cập nhật Roles nếu có thay đổi
+        if (updateDTO.getRoleIds() != null) {
+            Set<Integer> currentRoleIds = new HashSet<>();
+            employee.getRoles().forEach(role -> currentRoleIds.add(role.getRoleId()));
+
+            Set<Integer> newRoleIds = new HashSet<>(updateDTO.getRoleIds());
+
+            if (!currentRoleIds.equals(newRoleIds)) {
+                List<Role> newRoles = roleRepository.findAllById(updateDTO.getRoleIds());
+                if (newRoles.size() != updateDTO.getRoleIds().size()) {
+                    throw new RuntimeException("Một hoặc nhiều role không tồn tại");
+                }
+                employee.setRoles(new HashSet<>(newRoles));
+            }
+        }
+
+
+        // Cập nhật các thông tin khác của nhân viên
+        if (updateDTO.getEmployeeCode() != null) {
+            // Kiểm tra employeeCode nếu thay đổi
+            if (!employee.getEmployeeCode().equals(updateDTO.getEmployeeCode()) && employeeRepository.existsByEmployeeCode(updateDTO.getEmployeeCode())) {
+                throw new RuntimeException("Mã nhân viên đã tồn tại");
+            }
+            employee.setEmployeeCode(updateDTO.getEmployeeCode());
+        }
+        if (updateDTO.getFullName() != null) {
+            employee.setFullName(updateDTO.getFullName());
+        }
+        if (updateDTO.getEmail() != null) {
+            employee.setEmail(updateDTO.getEmail());
+        }
+        if (updateDTO.getPhoneNumber() != null) {
+            employee.setPhoneNumber(updateDTO.getPhoneNumber());
+        }
+        if (updateDTO.getGender() != null) {
+            employee.setGender(updateDTO.getGender());
+        }
+        if (updateDTO.getDateOfBirth() != null) {
+            employee.setDateOfBirth(updateDTO.getDateOfBirth().atStartOfDay());
+        }
+        if (updateDTO.getSpecialization() != null) {
+            employee.setSpecialization(updateDTO.getSpecialization());
+        }
+        if (updateDTO.getAvatarUrl() != null) {
+            employee.setAvatarUrl(updateDTO.getAvatarUrl());
+        }
+        // Chỉ cập nhật mật khẩu nếu nó được cung cấp trong DTO
+        if (updateDTO.getPassword() != null && !updateDTO.getPassword().isEmpty()) {
+            employee.setPassword(passwordEncoder.encode(updateDTO.getPassword()));
+        }
+
+
+        // Cập nhật thông tin lương
+        if (updateDTO.getBaseSalary() != null) {
+            employee.setBaseSalary(updateDTO.getBaseSalary());
+        }
+        if (updateDTO.getCommissionRate() != null) {
+            employee.setCommissionRate(updateDTO.getCommissionRate());
+        }
+        if (updateDTO.getSalaryType() != null) {
+            employee.setSalaryType(updateDTO.getSalaryType());
+        }
+
+        employee.setUpdatedAt(LocalDateTime.now());
+
+        return employeeRepository.save(employee);
+    }
 }
