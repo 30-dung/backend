@@ -39,16 +39,15 @@ public class EmployeeRequestDTO {
 
     private String avatarUrl;
 
-    @NotNull(message = "Base salary is required")
+
     @DecimalMin(value = "0.00", message = "Base salary must be non-negative")
     private BigDecimal baseSalary;
 
-    @NotNull(message = "Commission rate is required")
+
     @DecimalMin(value = "0.0000", message = "Commission rate must be non-negative")
     @DecimalMax(value = "1.0000", message = "Commission rate cannot exceed 1.0000 (100%)")
     private BigDecimal commissionRate;
 
-    @NotNull(message = "Salary type is required")
     private Employee.SalaryType salaryType;
 
     public String getEmployeeCode() {

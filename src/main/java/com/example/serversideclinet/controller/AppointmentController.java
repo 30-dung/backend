@@ -90,7 +90,7 @@ public class AppointmentController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('CUSTOMER') or hasRole('EMPLOYEE')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteAppointment(@PathVariable Integer id, Authentication authentication) {
         try {
             String email = authentication.getName();
@@ -139,7 +139,8 @@ public class AppointmentController {
             Appointment appointment = appointmentService.confirmAppointment(id);
             AppointmentResponse response = mapToAppointmentResponse(appointment);
             return new ResponseEntity<>(response, HttpStatus.OK);
-        } catch (AppointmentService.AppointmentException e) {
+        }
+        catch (AppointmentService.AppointmentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi hệ thống: " + e.getMessage());
@@ -175,6 +176,40 @@ public class AppointmentController {
         }
     }
 
+    @PatchMapping("/{id}/reject")
+    @PreAuthorize("hasRole('EMPLOYEE')")
+    public ResponseEntity<?> rejectAppointment(
+            @PathVariable Integer id,
+            @RequestParam(required = false) String reason,
+            Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            Appointment appointment = appointmentService.rejectAppointment(id, email, reason != null ? reason : "Không có lý do cụ thể.");
+            AppointmentResponse response = mapToAppointmentResponse(appointment);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (AppointmentService.AppointmentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi hệ thống: " + e.getMessage());
+        }
+    }
+
+    @PatchMapping("/{id}/reassign")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> reassignAppointment(
+            @PathVariable Integer id,
+            @RequestParam Integer newEmployeeId) {
+        try {
+            Appointment appointment = appointmentService.reassignAppointment(id, newEmployeeId);
+            AppointmentResponse response = mapToAppointmentResponse(appointment);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (AppointmentService.AppointmentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi hệ thống: " + e.getMessage());
+        }
+    }
+
     private AppointmentResponse mapToAppointmentResponse(Appointment appointment) {
         AppointmentResponse response = new AppointmentResponse();
         response.setAppointmentId(appointment.getAppointmentId());
@@ -190,6 +225,7 @@ public class AppointmentController {
         String serviceName = "Unknown Service";
         Integer employeeId = null;
         String employeeName = "Unknown Employee";
+        String employeeEmail = "Unknown Email";
         Integer userId = null;
         String userName = "Unknown User";
         double totalAmount = 0.0;
@@ -211,6 +247,8 @@ public class AppointmentController {
             employeeId = appointment.getEmployee().getEmployeeId();
             employeeName = appointment.getEmployee().getFullName() != null ?
                     appointment.getEmployee().getFullName() : "Unknown Employee";
+            employeeEmail = appointment.getEmployee().getEmail() != null ?
+                    appointment.getEmployee().getEmail() : "Unknown Email";
         }
 
         if (appointment.getUser() != null) {
@@ -224,7 +262,7 @@ public class AppointmentController {
         }
 
         response.setStoreService(new AppointmentResponse.StoreServiceDetail(storeId, storeServiceId, storeName, serviceName));
-        response.setEmployee(new AppointmentResponse.EmployeeDetail(employeeId, employeeName));
+        response.setEmployee(new AppointmentResponse.EmployeeDetail(employeeId, employeeName, employeeEmail));
         response.setUser(new AppointmentResponse.UserDetail(userId, userName));
         response.setInvoice(new AppointmentResponse.InvoiceDetailInfo(totalAmount));
 

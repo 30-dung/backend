@@ -5,6 +5,7 @@ import com.example.serversideclinet.model.Employee;
 import com.example.serversideclinet.model.User;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor; // <-- Dòng này phải có
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -12,19 +13,21 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-public interface AppointmentRepository extends JpaRepository<Appointment, Integer> {
+public interface AppointmentRepository extends JpaRepository<Appointment, Integer>, JpaSpecificationExecutor<Appointment> { // <-- Đảm bảo dòng này chính xác
+
     @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
     List<Appointment> findByUserOrderByCreatedAtDesc(User user);
 
+    @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
     List<Appointment> findByEmployeeAndStatus(Employee employee, Appointment.Status status);
 
     @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
-    List<Appointment> findByEmployeeAndStartTimeBetween(Employee employee, LocalDateTime startTime, LocalDateTime endTime); // Đã có
+    List<Appointment> findByEmployeeAndStartTimeBetween(Employee employee, LocalDateTime startTime, LocalDateTime endTime);
 
     @Query("SELECT a FROM Appointment a WHERE a.employee = :employee " +
-            "AND a.status != 'CANCELED' " +
+            "AND a.status != 'CANCELED' AND a.status != 'REJECTED' " +
             "AND (a.startTime < :endTime AND a.endTime > :startTime)")
-    @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee"})
+    @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
     List<Appointment> findByEmployeeAndTimeOverlap(@Param("employee") Employee employee,
                                                    @Param("startTime") LocalDateTime startTime,
                                                    @Param("endTime") LocalDateTime endTime);
@@ -37,8 +40,12 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
     @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
     List<Appointment> findByEmployeeOrderByCreatedAtDesc(Employee employee);
 
+    @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
+    List<Appointment> findByEmployeeAndStatusNotIn(Employee employee, List<Appointment.Status> statuses);
+
     List<Appointment> findByStatusAndSalaryCalculated(Appointment.Status status, boolean b);
 
+    @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
     List<Appointment> findByStatus(Appointment.Status status);
 
     @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
@@ -51,27 +58,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
     List<Appointment> findByStatusAndStartTimeBetween(Appointment.Status status, LocalDateTime start, LocalDateTime end);
 
     @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
-    List<Appointment> findByEmployeeOrderByStartTimeDesc(Employee employee); // Dùng cho trường hợp chỉ lọc theo nhân viên, sắp xếp theo start time
+    List<Appointment> findByEmployeeOrderByStartTimeDesc(Employee employee);
 
-    // Giữ nguyên các query findByFilters cho ADMIN, không thay đổi
-    @Query("SELECT a FROM Appointment a " +
-            "WHERE (:status IS NULL OR a.status = :status) " +
-            "AND (:employeeEmail IS NULL OR a.employee.email = :employeeEmail) " +
-            "AND (:startDate IS NULL OR a.startTime >= :startDate) " +
-            "AND (:endDate IS NULL OR a.startTime <= :endDate)")
-    List<Appointment> findByFilters(
-            @Param("status") String status,
-            @Param("employeeEmail") String employeeEmail,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
-    );
-
-    @Query("SELECT a FROM Appointment a " +
-            "WHERE (:status IS NULL OR a.status = :status) " +
-            "AND (:employeeEmail IS NULL OR a.employee.email = :employeeEmail)")
-    List<Appointment> findByFilters(
-            @Param("status") String status,
-            @Param("employeeEmail") String employeeEmail
-    );
-
+    @Override
+    @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
+    List<Appointment> findAll();
 }

@@ -17,8 +17,8 @@ public class AppointmentResponse {
 
     @Data
     public static class StoreServiceDetail {
-        private Integer storeId;        // THÊM
-        private Integer storeServiceId; // THÊM
+        private Integer storeId;
+        private Integer storeServiceId;
         private String storeName;
         private String serviceName;
 
@@ -32,12 +32,20 @@ public class AppointmentResponse {
 
     @Data
     public static class EmployeeDetail {
-        private Integer employeeId; // THÊM
+        private Integer employeeId;
         private String fullName;
+        private String email; // THÊM TRƯỜNG EMAIL VÀO ĐÂY
 
         public EmployeeDetail(Integer employeeId, String fullName) {
             this.employeeId = employeeId;
             this.fullName = fullName;
+            this.email = null; // Khởi tạo mặc định
+        }
+
+        public EmployeeDetail(Integer employeeId, String fullName, String email) { // Constructor mới
+            this.employeeId = employeeId;
+            this.fullName = fullName;
+            this.email = email;
         }
     }
 
@@ -52,7 +60,7 @@ public class AppointmentResponse {
 
     @Data
     public static class UserDetail {
-        private Integer userId; // THÊM
+        private Integer userId;
         private String fullName;
 
         public UserDetail(Integer userId, String fullName) {

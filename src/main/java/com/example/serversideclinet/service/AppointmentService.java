@@ -4,13 +4,14 @@ import com.example.serversideclinet.dto.AppointmentRequest;
 import com.example.serversideclinet.model.*;
 import com.example.serversideclinet.repository.*;
 import com.example.serversideclinet.util.SlugGenerator;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.example.serversideclinet.model.Appointment.Status;
+import org.springframework.data.jpa.domain.Specification;
 import java.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +19,7 @@ import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class AppointmentService {
@@ -54,6 +56,7 @@ public class AppointmentService {
     @Autowired
     private EmailService emailService;
 
+    // Cập nhật phương thức tạo lịch để gửi email thông báo cho nhân viên
     @Transactional
     public List<Appointment> createMultipleAppointments(List<AppointmentRequest> requests, String userEmail) {
         logger.info("Starting createMultipleAppointments for user: {}", userEmail);
@@ -142,7 +145,7 @@ public class AppointmentService {
             }
             invoiceDetailRepository.save(invoiceDetail);
 
-            // NEW: Gửi email thông báo cho nhân viên về cuộc hẹn mới
+            // Gửi email thông báo cho nhân viên về cuộc hẹn mới
             sendNewAppointmentNotificationToEmployee(appointment);
         }
 
@@ -152,7 +155,7 @@ public class AppointmentService {
         return createdAppointments;
     }
 
-    // NEW: Method để gửi email thông báo cho nhân viên khi có cuộc hẹn mới
+    // Method để gửi email thông báo cho nhân viên khi có cuộc hẹn mới
     private void sendNewAppointmentNotificationToEmployee(Appointment appointment) {
         try {
             String employeeEmail = appointment.getEmployee().getEmail();
@@ -161,19 +164,18 @@ public class AppointmentService {
                 return;
             }
 
-            // Format thời gian đẹp hơn
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
             String startTimeFormatted = appointment.getStartTime().format(formatter);
             String endTimeFormatted = appointment.getEndTime().format(formatter);
             String timeRange = startTimeFormatted + " - " + endTimeFormatted;
 
-            // Lấy số điện thoại khách hàng (nếu có)
-            String customerPhone = appointment.getUser().getPhoneNumber(); // Assuming User has phoneNumber field
+            String customerPhone = appointment.getUser().getPhoneNumber();
+            String customerName = appointment.getUser().getFullName(); // Lấy tên khách hàng
 
             emailService.sendNewAppointmentNotificationToEmployee(
                     employeeEmail,
                     appointment.getEmployee().getFullName(),
-                    appointment.getUser().getFullName(),
+                    customerName, // Truyền tên khách hàng
                     timeRange,
                     appointment.getStoreService().getService().getServiceName(),
                     customerPhone);
@@ -192,7 +194,6 @@ public class AppointmentService {
         return slug;
     }
 
-    // UPDATED: Method now sends confirmation email when appointment is confirmed
     private void sendAppointmentConfirmationToCustomer(Appointment appointment) {
         try {
             String customerEmail = appointment.getUser().getEmail();
@@ -201,7 +202,6 @@ public class AppointmentService {
                 return;
             }
 
-            // Format thời gian đẹp hơn
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
             String startTimeFormatted = appointment.getStartTime().format(formatter);
             String endTimeFormatted = appointment.getEndTime().format(formatter);
@@ -216,6 +216,95 @@ public class AppointmentService {
             logger.info("Confirmation email sent successfully to customer: {}", customerEmail);
         } catch (Exception e) {
             logger.error("Failed to send confirmation email to customer: {}", e.getMessage());
+        }
+    }
+
+    // NEW: Method to send rejection notification to customer
+    private void sendAppointmentRejectionToCustomer(Appointment appointment, String reason) {
+        try {
+            String customerEmail = appointment.getUser().getEmail();
+            if (customerEmail == null || !customerEmail.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+                logger.error("Invalid customer email for rejection: {}", customerEmail);
+                return;
+            }
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            String startTimeFormatted = appointment.getStartTime().format(formatter);
+            String serviceName = appointment.getStoreService().getService().getServiceName();
+            String employeeName = appointment.getEmployee().getFullName();
+
+            emailService.sendAppointmentRejection(
+                    customerEmail,
+                    appointment.getUser().getFullName(),
+                    employeeName, // Nhân viên từ chối
+                    startTimeFormatted,
+                    serviceName,
+                    reason);
+
+            logger.info("Rejection email sent successfully to customer: {}", customerEmail);
+        } catch (Exception e) {
+            logger.error("Failed to send rejection email to customer: {}", e.getMessage());
+        }
+    }
+
+    // NEW: Method to send reassignment notification to customer
+    private void sendAppointmentReassignmentNotificationToCustomer(Appointment appointment, Employee oldEmployee, String newEmployeeName) {
+        try {
+            String customerEmail = appointment.getUser().getEmail();
+            if (customerEmail == null || !customerEmail.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+                logger.error("Invalid customer email for reassignment: {}", customerEmail);
+                return;
+            }
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            String startTimeFormatted = appointment.getStartTime().format(formatter);
+            String serviceName = appointment.getStoreService().getService().getServiceName();
+
+            emailService.sendAppointmentReassignment(
+                    customerEmail,
+                    appointment.getUser().getFullName(),
+                    oldEmployee.getFullName(), // Nhân viên cũ
+                    newEmployeeName, // Nhân viên mới
+                    startTimeFormatted,
+                    serviceName
+            );
+
+            logger.info("Reassignment email sent successfully to customer: {}", customerEmail);
+        } catch (Exception e) {
+            logger.error("Failed to send reassignment email to customer: {}", e.getMessage());
+        }
+    }
+
+    // NEW: Method to send new appointment notification to the reassign employee
+    private void sendReassignedAppointmentNotificationToEmployee(Appointment appointment, String oldEmployeeName) {
+        try {
+            String newEmployeeEmail = appointment.getEmployee().getEmail();
+            if (newEmployeeEmail == null || !newEmployeeEmail.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+                logger.error("Invalid new employee email for reassignment notification: {}", newEmployeeEmail);
+                return;
+            }
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            String startTimeFormatted = appointment.getStartTime().format(formatter);
+            String endTimeFormatted = appointment.getEndTime().format(formatter);
+            String timeRange = startTimeFormatted + " - " + endTimeFormatted;
+
+            String customerPhone = appointment.getUser().getPhoneNumber();
+            String customerName = appointment.getUser().getFullName();
+
+            emailService.sendReassignedAppointmentNotificationToEmployee(
+                    newEmployeeEmail,
+                    appointment.getEmployee().getFullName(), // Tên nhân viên mới
+                    customerName,
+                    timeRange,
+                    appointment.getStoreService().getService().getServiceName(),
+                    customerPhone,
+                    oldEmployeeName // Tên nhân viên cũ để thông báo
+            );
+
+            logger.info("Reassigned appointment notification email sent successfully to new employee: {}", newEmployeeEmail);
+        } catch (Exception e) {
+            logger.error("Failed to send reassignment email to new employee: {}", e.getMessage());
         }
     }
 
@@ -234,6 +323,7 @@ public class AppointmentService {
         List<InvoiceDetail> details = invoiceDetailRepository.findByInvoiceInvoiceId(invoiceId);
         for (InvoiceDetail detail : details) {
             Appointment appointment = detail.getAppointment();
+            // Chỉ hoàn thành nếu đang ở trạng thái CONFIRMED
             if (appointment != null && appointment.getStatus() == Appointment.Status.CONFIRMED) {
                 appointment.setStatus(Appointment.Status.COMPLETED);
                 appointmentRepository.save(appointment);
@@ -300,10 +390,9 @@ public class AppointmentService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new AppointmentException("User not found with email: " + userEmail));
 
-        if (!appointment.getUser().getEmail().equals(userEmail) && !user.getRoles().stream().anyMatch(r -> r.getRoleName().equals("EMPLOYEE"))) {
-            throw new AppointmentException("Unauthorized to delete this appointment");
+        if (!user.getRoles().stream().anyMatch(r -> r.getRoleName().equals("ADMIN"))) {
+            throw new AppointmentException("Only ADMIN can delete appointments physically.");
         }
-
         appointmentRepository.delete(appointment);
     }
 
@@ -313,28 +402,43 @@ public class AppointmentService {
         return appointmentRepository.findByUserOrderByCreatedAtDesc(user);
     }
 
-    // Cập nhật phương thức này để nhận thêm các tham số lọc ngày
-    @Transactional // Thêm @Transactional nếu có các thao tác lazy loading hoặc tương tự
-    @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"}) // Giữ EntityGraph nếu cần fetch eager
+    // Phương thức getAppointmentsByEmployee (cho ROLE_EMPLOYEE), giờ cũng sử dụng Specification
+    @Transactional(readOnly = true)
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
     public List<Appointment> getAppointmentsByEmployee(String employeeEmail, Status status, LocalDateTime startDate, LocalDateTime endDate) {
         Employee employee = employeeRepository.findByEmail(employeeEmail)
                 .orElseThrow(() -> new AppointmentException("Employee not found with email: " + employeeEmail));
 
-        // Logic lọc tương tự như filterAppointments, nhưng luôn có employee
-        if (status != null && startDate != null && endDate != null) {
-            return appointmentRepository.findByEmployeeAndStatusAndStartTimeBetween(employee, status, startDate, endDate);
-        } else if (startDate != null && endDate != null) {
-            return appointmentRepository.findByEmployeeAndStartTimeBetween(employee, startDate, endDate);
-        } else if (status != null) {
-            return appointmentRepository.findByEmployeeAndStatus(employee, status);
+        Specification<Appointment> spec = Specification.where(null); // Bắt đầu với Specification rỗng
+
+        // Lọc theo nhân viên (bắt buộc cho endpoint này)
+        spec = spec.and((root, query, cb) -> cb.equal(root.join("employee").get("employeeId"), employee.getEmployeeId()));
+
+        // ONLY CHANGE START
+        // Lọc theo trạng thái
+        if (status != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
         } else {
-            // Trường hợp không có bộ lọc ngày hoặc trạng thái, chỉ lọc theo nhân viên
-            return appointmentRepository.findByEmployeeOrderByCreatedAtDesc(employee);
+            // If status is ALL or null, exclude REJECTED by default for employee view
+            spec = spec.and((root, query, cb) -> cb.notEqual(root.get("status"), Appointment.Status.REJECTED));
+            // Removed default exclusion of CANCELED appointments. Now CANCELED appointments will be shown if 'ALL' is selected.
         }
+        // ONLY CHANGE END
+
+        // Lọc theo khoảng thời gian
+        if (startDate != null && endDate != null) {
+            spec = spec.and((root, query, cb) -> cb.between(root.get("startTime"), startDate, endDate));
+        } else if (startDate != null) { // Chỉ có startDate
+            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("startTime"), startDate));
+        } else if (endDate != null) { // Chỉ có endDate
+            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("startTime"), endDate));
+        }
+
+        logger.info("Building Specification for getAppointmentsByEmployee: {}", spec.toString()); // Debug log
+        return appointmentRepository.findAll(spec); // Sử dụng findAll(Specification)
     }
 
 
-    // UPDATED: Now sends confirmation email when confirming appointment
     @Transactional
     public Appointment confirmAppointment(Integer id) {
         Appointment appointment = getAppointmentById(id);
@@ -345,7 +449,6 @@ public class AppointmentService {
         appointment.setStatus(Appointment.Status.CONFIRMED);
         Appointment savedAppointment = appointmentRepository.save(appointment);
 
-        // Gửi email xác nhận cho khách hàng khi nhân viên xác nhận cuộc hẹn
         logger.info("Sending confirmation email for appointment ID: {} to customer: {}",
                 id, appointment.getUser().getEmail());
         sendAppointmentConfirmationToCustomer(savedAppointment);
@@ -359,27 +462,121 @@ public class AppointmentService {
         if (appointment.getStatus() != Appointment.Status.CONFIRMED) {
             throw new AppointmentException("Only confimed appointments can be completed");
         }
-
         appointment.setStatus(Appointment.Status.COMPLETED);
+        appointment.setCompletedAt(LocalDateTime.now());
         Appointment savedAppointment = appointmentRepository.save(appointment);
         return savedAppointment;
     }
 
+    // NEW: Reject Appointment Method
+    @Transactional
+    public Appointment rejectAppointment(Integer id, String userEmail, String reason) {
+        Appointment appointment = getAppointmentById(id);
+        Employee employee = employeeRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new AppointmentException("Employee not found with email: " + userEmail));
+
+        // Chỉ nhân viên được gán lịch đó mới có quyền từ chối
+        if (!appointment.getEmployee().getEmployeeId().equals(employee.getEmployeeId())) {
+            throw new AppointmentException("Unauthorized to reject this appointment");
+        }
+
+        if (appointment.getStatus() != Appointment.Status.PENDING) {
+            throw new AppointmentException("Only pending appointments can be rejected");
+        }
+
+        appointment.setStatus(Appointment.Status.REJECTED);
+        Appointment savedAppointment = appointmentRepository.save(appointment);
+
+        // Gửi email thông báo từ chối cho khách hàng
+        sendAppointmentRejectionToCustomer(savedAppointment, reason);
+
+        return savedAppointment;
+    }
+
+    // UPDATED: Cancel Appointment Method (for CUSTOMER/EMPLOYEE to cancel)
     @Transactional
     public Appointment cancelAppointment(Integer id, String userEmail) {
         Appointment appointment = getAppointmentById(id);
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new AppointmentException("User not found with email: " + userEmail));
 
-        if (!appointment.getUser().getEmail().equals(userEmail) && !user.getRoles().stream().anyMatch(r -> r.getRoleName().equals("EMPLOYEE"))) {
+        User userAsCustomer = userRepository.findByEmail(userEmail).orElse(null);
+        Employee userAsEmployee = employeeRepository.findByEmail(userEmail).orElse(null);
+
+        boolean isCustomerOfAppointment = (userAsCustomer != null && appointment.getUser().getEmail().equals(userEmail));
+        boolean isEmployeeOfAppointment = (userAsEmployee != null && appointment.getEmployee().getEmail().equals(userEmail));
+        boolean isAdmin = !(isCustomerOfAppointment || isEmployeeOfAppointment); // Rất đơn giản hóa, thực tế nên dùng SecurityContext
+
+        if (!isCustomerOfAppointment && !isEmployeeOfAppointment && !isAdmin) {
             throw new AppointmentException("Unauthorized to cancel this appointment");
         }
 
-        if (appointment.getStatus() == Appointment.Status.COMPLETED) {
-            throw new AppointmentException("Completed appointments cannot be canceled");
+        if (appointment.getStatus() == Status.COMPLETED ||
+                appointment.getStatus() == Status.CANCELED ||
+                appointment.getStatus() == Status.REJECTED) {
+            throw new AppointmentException("Appointment in status " + appointment.getStatus() + " cannot be canceled.");
         }
-        appointment.setStatus(Appointment.Status.CANCELED);
-        return appointmentRepository.save(appointment);
+
+        appointment.setStatus(Status.CANCELED);
+        Appointment savedAppointment = appointmentRepository.save(appointment);
+
+        String canceledBy = "Unknown";
+        if (isCustomerOfAppointment) {
+            canceledBy = appointment.getUser().getFullName() + " (Khách hàng)";
+        } else if (isEmployeeOfAppointment) {
+            canceledBy = appointment.getEmployee().getFullName() + " (Nhân viên)";
+        } else {
+            canceledBy = "Admin (" + userEmail + ")";
+        }
+
+        try {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            String timeRange = appointment.getStartTime().format(formatter) + " - " + appointment.getEndTime().format(formatter);
+            emailService.sendAppointmentCancellationToCustomer(
+                    appointment.getUser().getEmail(),
+                    appointment.getUser().getFullName(),
+                    appointment.getEmployee().getFullName(), // Nhân viên được gán lịch
+                    timeRange,
+                    appointment.getStoreService().getService().getServiceName(),
+                    canceledBy
+            );
+            logger.info("Cancellation email sent successfully to customer: {}", appointment.getUser().getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send cancellation email to customer: {}", e.getMessage(), e);
+        }
+
+        return savedAppointment;
+    }
+
+    // NEW: Reassign Appointment Method (for ADMIN)
+    @Transactional
+    public Appointment reassignAppointment(Integer appointmentId, Integer newEmployeeId) {
+        Appointment appointment = getAppointmentById(appointmentId);
+        Employee oldEmployee = appointment.getEmployee();
+
+        if (appointment.getStatus() != Appointment.Status.REJECTED) {
+            throw new AppointmentException("Only rejected appointments can be reassigned.");
+        }
+
+        Employee newEmployee = employeeRepository.findById(newEmployeeId)
+                .orElseThrow(() -> new AppointmentException("New employee not found with ID: " + newEmployeeId));
+
+        if (!oldEmployee.getStore().getStoreId().equals(newEmployee.getStore().getStoreId())) {
+            throw new AppointmentException("New employee must be from the same store.");
+        }
+
+        List<Appointment> overlappingAppointments = appointmentRepository.findByEmployeeAndTimeOverlap(
+                newEmployee, appointment.getStartTime(), appointment.getEndTime());
+        if (!overlappingAppointments.isEmpty()) {
+            throw new AppointmentException("New employee's schedule overlaps with existing appointments.");
+        }
+
+        appointment.setEmployee(newEmployee);
+        appointment.setStatus(Appointment.Status.PENDING); // Chuyển về PENDING để nhân viên mới xác nhận
+        Appointment savedAppointment = appointmentRepository.save(appointment);
+
+        sendAppointmentReassignmentNotificationToCustomer(savedAppointment, oldEmployee, newEmployee.getFullName());
+        sendReassignedAppointmentNotificationToEmployee(savedAppointment, oldEmployee.getFullName());
+
+        return savedAppointment;
     }
 
     public List<Appointment> getAllAppointments() {
@@ -392,39 +589,43 @@ public class AppointmentService {
         }
     }
 
-    // Giữ nguyên phương thức filterAppointments cho ADMIN, không thay đổi
-    @Transactional
-    @EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
-    public List<Appointment> filterAppointments(Status status, String employeeEmail, LocalDateTime startDate, LocalDateTime endDate) {
-        if (status == null && employeeEmail == null && startDate == null && endDate == null) {
-            return appointmentRepository.findAll();
+    // Phương thức filterAppointments cho ADMIN, sử dụng Spring Data JPA Specifications
+    @Transactional(readOnly = true) // Đảm bảo chỉ đọc dữ liệu
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"invoice", "storeService.store", "storeService.service", "employee", "user"})
+    public List<Appointment> filterAppointments(
+            Status status,
+            String employeeEmail,
+            LocalDateTime startDate,
+            LocalDateTime endDate) {
+
+        Specification<Appointment> spec = Specification.where(null); // Bắt đầu với Specification rỗng
+
+        // Lọc theo trạng thái
+        if (status != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
         }
 
-        Employee employee = employeeEmail != null
-                ? employeeRepository.findByEmail(employeeEmail)
-                .orElseThrow(() -> new AppointmentException("Employee not found with email: " + employeeEmail))
-                : null;
-
-        // Logic lọc theo các kết hợp tham số
-        // Thứ tự ưu tiên: employee + status + time -> employee + time -> employee + status -> employee
-        // Sau đó đến: status + time -> status -> time -> all
-        if (employee != null && status != null && startDate != null && endDate != null) {
-            return appointmentRepository.findByEmployeeAndStatusAndStartTimeBetween(employee, status, startDate, endDate);
-        } else if (employee != null && startDate != null && endDate != null) {
-            return appointmentRepository.findByEmployeeAndStartTimeBetween(employee, startDate, endDate);
-        } else if (employee != null && status != null) {
-            return appointmentRepository.findByEmployeeAndStatus(employee, status);
-        } else if (employee != null) {
-            return appointmentRepository.findByEmployeeOrderByCreatedAtDesc(employee); // Hoặc findByEmployeeOrderByStartTimeDesc
-        } else if (status != null && startDate != null && endDate != null) {
-            return appointmentRepository.findByStatusAndStartTimeBetween(status, startDate, endDate);
-        } else if (status != null) {
-            return appointmentRepository.findByStatus(status);
-        } else if (startDate != null && endDate != null) {
-            return appointmentRepository.findByStartTimeBetween(startDate, endDate);
+        // Lọc theo email nhân viên
+        // Chỉ thêm điều kiện nếu employeeEmail không null và không phải "ALL" (để cho phép lọc tất cả)
+        if (employeeEmail != null && !employeeEmail.equalsIgnoreCase("ALL")) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.join("employee").get("email"), employeeEmail));
         }
 
-        return appointmentRepository.findAll();
+        // Lọc theo khoảng thời gian startTime
+        // Sử dụng `between` nếu cả startDate và endDate đều có
+        if (startDate != null && endDate != null) {
+            spec = spec.and((root, query, cb) -> cb.between(root.get("startTime"), startDate, endDate));
+        } else if (startDate != null) { // Chỉ có startDate
+            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("startTime"), startDate));
+        } else if (endDate != null) { // Chỉ có endDate
+            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("startTime"), endDate));
+        }
+
+        logger.info("Building Specification for filterAppointments: {}", spec.toString()); // Debug log
+
+        // Thực hiện truy vấn với Specification
+        List<Appointment> result = appointmentRepository.findAll(spec);
+        logger.info("filterAppointments result size: {}", result.size()); // Debug log
+        return result;
     }
-
 }

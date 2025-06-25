@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -174,9 +175,10 @@ public class EmployeeService {
             throw new RuntimeException("Bạn không có quyền thay đổi cuộc hẹn này");
         }
 
-        String timeRange = appointment.getStartTime() + " - " + appointment.getEndTime();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"); // <-- Khai báo formatter
+        String timeRange = appointment.getStartTime().format(formatter) + " - " + appointment.getEndTime().format(formatter); // <-- Sử dụng formatter
         String customerName = appointment.getUser().getFullName();
-        String email = appointment.getUser().getEmail();
+        String customerEmail = appointment.getUser().getEmail(); // Lấy email khách hàng
         String employeeName = employee.getFullName();
         String serviceName = appointment.getStoreService().getService().getServiceName();
 
@@ -187,15 +189,24 @@ public class EmployeeService {
                 }
                 appointment.setStatus(Appointment.Status.CONFIRMED);
                 appointmentRepository.save(appointment);
-                emailService.sendAppointmentConfirmation(email, customerName, employeeName, timeRange, serviceName);
+                emailService.sendAppointmentConfirmation(customerEmail, customerName, employeeName, timeRange, serviceName);
                 break;
-            case "CANCEL":
-                if (appointment.getStatus() != Appointment.Status.PENDING) {
-                    throw new RuntimeException("Chỉ có thể hủy cuộc hẹn ở trạng thái PENDING");
+            case "CANCEL": // Logic cho Employee hủy lịch
+                // Cho phép hủy nếu đang PENDING hoặc CONFIRMED
+                if (appointment.getStatus() != Appointment.Status.PENDING && appointment.getStatus() != Appointment.Status.CONFIRMED) {
+                    throw new RuntimeException("Chỉ có thể hủy cuộc hẹn ở trạng thái PENDING hoặc CONFIRMED");
                 }
                 appointment.setStatus(Appointment.Status.CANCELED);
                 appointmentRepository.save(appointment);
-                emailService.sendAppointmentCancellation(email, customerName, employeeName, timeRange, serviceName);
+                // GỌI ĐÚNG PHƯƠNG THỨC VÀ TRUYỀN ĐỦ THAM SỐ
+                emailService.sendAppointmentCancellationToCustomer(
+                        customerEmail,
+                        customerName,
+                        employeeName,
+                        timeRange,
+                        serviceName,
+                        employeeName + " (Nhân viên)" // Người hủy là nhân viên
+                );
                 break;
             case "COMPLETE":
                 if (appointment.getStatus() != Appointment.Status.CONFIRMED) {
@@ -205,7 +216,7 @@ public class EmployeeService {
                 appointment.setCompletedAt(LocalDateTime.now());
                 appointment.setSalaryCalculated(false); // Ensure salary can be calculated
                 appointmentRepository.save(appointment);
-                emailService.sendAppointmentCompletion(email, customerName, employeeName, timeRange, serviceName);
+                emailService.sendAppointmentCompletion(customerEmail, customerName, employeeName, timeRange, serviceName);
                 break;
             default:
                 throw new IllegalArgumentException("Hành động không hợp lệ: chỉ chấp nhận CONFIRM, CANCEL hoặc COMPLETE");
@@ -222,6 +233,7 @@ public class EmployeeService {
                 appointment.getNotes()
         );
     }
+
 
     public List<Employee> getEmployeesByStore(Integer storeId) {
         return employeeRepository.findByStoreStoreId(storeId);
@@ -384,4 +396,6 @@ public class EmployeeService {
 
         return employeeRepository.save(employee);
     }
+
+
 }

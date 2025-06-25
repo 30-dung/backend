@@ -113,8 +113,9 @@ public class Appointment {
         this.completedAt = completedAt;
     }
 
+    // THÊM TRẠNG THÁI REJECTED
     public enum Status {
-        PENDING, CONFIRMED, COMPLETED, CANCELED
+        PENDING, CONFIRMED, COMPLETED, CANCELED, REJECTED // Thêm REJECTED
     }
 
     // Getters and Setters

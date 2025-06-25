@@ -10,9 +10,13 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class EmailService {
+
+    private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
 
     @Autowired
     private JavaMailSender mailSender;
@@ -49,39 +53,36 @@ public class EmailService {
         sendHtmlEmailWithLogo(to, subject, content);
     }
 
+    // UPDATED & RENAMED: Phương thức gửi email khi cuộc hẹn bị hủy cho KHÁCH HÀNG
+    // Thêm tham số 'canceledBy'
     @Async
-    public void sendAppointmentCancellation(String to, String customerName, String employeeName, String timeRange, String serviceName) throws MessagingException, IOException {
+    public void sendAppointmentCancellationToCustomer(String customerEmail, String customerName, String employeeName, String timeRange, String serviceName, String canceledBy) throws MessagingException, IOException {
         String subject = "Cuộc hẹn đã bị hủy - BarberShop";
-        String content = """
-                <div style="padding: 20px; background-color: #fff3cd; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
-                    <h3 style="color: #856404; margin-bottom: 20px;">⚠️ Thông báo hủy cuộc hẹn</h3>
+        String content = String.format(
+                """
+                <div style="padding: 20px; background-color: #f8d7da; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc3545;">
+                    <h3 style="color: #721c24; margin-bottom: 20px;">❌ Thông báo hủy cuộc hẹn</h3>
                     
                     <p style="font-size: 16px; margin-bottom: 15px;">Chào <strong>%s</strong>,</p>
                     
                     <p style="font-size: 16px; line-height: 1.6;">
-                        Rất tiếc, cuộc hẹn của bạn đã bị hủy:
+                        Rất tiếc, cuộc hẹn dịch vụ <b>%s</b> của bạn với <b>%s</b> vào lúc <b>%s</b> đã bị <b>hủy bỏ</b>.
                     </p>
                     
-                    <div style="background-color: white; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                        <p style="margin: 5px 0;"><strong>📅 Thời gian:</strong> %s</p>
-                        <p style="margin: 5px 0;"><strong>💼 Dịch vụ:</strong> %s</p>
-                        <p style="margin: 5px 0;"><strong>👨‍💼 Nhân viên:</strong> %s</p>
-                    </div>
-                    
-                    <p style="font-size: 16px; color: #15397F;">
-                        💡 Bạn có thể đặt lại cuộc hẹn khác bằng cách truy cập website của chúng tôi.
+                    <p style="font-size: 16px; color: #721c24; font-weight: bold;">
+                        Người hủy: %s
                     </p>
                     
                     <p style="font-size: 14px; color: #666; margin-top: 20px;">
-                        Xin lỗi vì sự bất tiện này. Chúng tôi luôn sẵn sàng phục vụ bạn!
+                        Vui lòng liên hệ với chúng tôi để sắp xếp lại lịch hẹn hoặc biết thêm chi tiết.
                     </p>
                 </div>
-                """.formatted(customerName, timeRange, serviceName, employeeName);
-
-        sendHtmlEmailWithLogo(to, subject, content);
+                """, customerName, serviceName, employeeName, timeRange, canceledBy
+        );
+        sendHtmlEmailWithLogo(customerEmail, subject, content);
     }
 
-    // NEW: Email thông báo cho nhân viên khi có cuộc hẹn mới
+    // NEW: Email thông báo cho nhân viên khi có cuộc hẹn mới (đã có trong file bạn cung cấp)
     @Async
     public void sendNewAppointmentNotificationToEmployee(String employeeEmail, String employeeName, String customerName, String timeRange, String serviceName, String customerPhone) throws MessagingException, IOException {
         String subject = "🔔 Bạn có cuộc hẹn mới - BarberShop";
@@ -127,10 +128,12 @@ public class EmailService {
         sendHtmlEmailWithLogo(employeeEmail, subject, content);
     }
 
-    // NEW: Email thông báo cho nhân viên khi khách hàng hủy cuộc hẹn
+    // Original: sendAppointmentCancellationToEmployee
+    // Đây là phương thức gửi cho nhân viên khi KHÁCH HÀNG hủy.
+    // Bạn đã có nó, tôi sẽ giữ nguyên nhưng tách riêng ra để rõ ràng hơn.
     @Async
     public void sendAppointmentCancellationToEmployee(String employeeEmail, String employeeName, String customerName, String timeRange, String serviceName) throws MessagingException, IOException {
-        String subject = "❌ Cuộc hẹn đã bị hủy - BarberShop";
+        String subject = "❌ Cuộc hẹn của khách hàng đã bị hủy - BarberShop";
         String content = """
                 <div style="padding: 20px; background-color: #f8d7da; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc3545;">
                     <h3 style="color: #721c24; margin-bottom: 20px;">❌ Thông báo hủy cuộc hẹn</h3>
@@ -208,7 +211,135 @@ public class EmailService {
                 """.formatted(content);
     }
 
+    // NEW: Phương thức gửi email khi lịch bị từ chối (customer)
+    @Async
+    public void sendAppointmentRejection(String customerEmail, String customerName, String employeeName, String startTime, String serviceName, String reason) throws MessagingException, IOException {
+        String subject = "Thông báo: Lịch hẹn của bạn đã bị từ chối - BarberShop";
+        String content = String.format(
+                """
+                <div style="padding: 20px; background-color: #f8d7da; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc3545;">
+                    <h3 style="color: #721c24; margin-bottom: 20px;">❌ Cuộc hẹn của bạn đã bị từ chối</h3>
+                    
+                    <p style="font-size: 16px; margin-bottom: 15px;">Chào <strong>%s</strong>,</p>
+                    
+                    <p style="font-size: 16px; line-height: 1.6;">
+                        Chúng tôi rất tiếc phải thông báo rằng lịch hẹn dịch vụ <b>%s</b> của bạn với <b>%s</b> vào lúc <b>%s</b> đã bị <b>từ chối</b>.
+                    </p>
+                    
+                    <p style="font-size: 16px; color: #721c24; font-weight: bold;">
+                        Lý do: %s
+                    </p>
+                    
+                    <p style="font-size: 14px; color: #666; margin-top: 20px;">
+                        Bạn có thể đặt lại lịch hẹn khác hoặc liên hệ với chúng tôi để được hỗ trợ thêm.
+                    </p>
+                </div>
+                """, customerName, serviceName, employeeName, startTime, reason
+        );
+        sendHtmlEmailWithLogo(customerEmail, subject, content);
+    }
+
+    // NEW: Phương thức gửi email khi lịch được chuyển (cho khách hàng)
+    @Async
+    public void sendAppointmentReassignment(String customerEmail, String customerName, String oldEmployeeName, String newEmployeeName, String startTime, String serviceName) throws MessagingException, IOException {
+        String subject = "Lịch hẹn của bạn đã được chuyển - BarberShop";
+        String content = String.format(
+                """
+                <div style="padding: 20px; background-color: #e6f7ff; border-radius: 8px; margin: 20px 0; border-left: 4px solid #1890ff;">
+                    <h3 style="color: #096dd9; margin-bottom: 20px;">🔄 Lịch hẹn của bạn đã được chuyển</h3>
+                    
+                    <p style="font-size: 16px; margin-bottom: 15px;">Chào <strong>%s</strong>,</p>
+                    
+                    <p style="font-size: 16px; line-height: 1.6;">
+                        Vì một số lý do không mong muốn, lịch hẹn dịch vụ <b>%s</b> của bạn vào lúc <b>%s</b>,
+                        ban đầu với <b>%s</b>, đã được <b>chuyển sang cho <b>%s</b></b>.
+                    </p>
+                    
+                    <p style="font-size: 16px; color: #096dd9; font-weight: bold;">
+                        Chúng tôi xin lỗi vì sự bất tiện này. Lịch hẹn của bạn vẫn được giữ nguyên về thời gian và dịch vụ.
+                    </p>
+                    
+                    <p style="font-size: 14px; color: #666; margin-top: 20px;">
+                        Chúng tôi mong được đón tiếp bạn!
+                    </p>
+                </div>
+                """, customerName, serviceName, startTime, oldEmployeeName, newEmployeeName
+        );
+        sendHtmlEmailWithLogo(customerEmail, subject, content);
+    }
+
+    // NEW: Phương thức gửi email thông báo lịch được chuyển cho nhân viên mới
+    @Async
+    public void sendReassignedAppointmentNotificationToEmployee(String newEmployeeEmail, String newEmployeeName, String customerName, String timeRange, String serviceName, String customerPhone, String oldEmployeeName) throws MessagingException, IOException {
+        String subject = "Bạn có lịch hẹn được phân công lại - BarberShop";
+        String content = String.format(
+                """
+                <div style="padding: 20px; background-color: #e0ffe0; border-radius: 8px; margin: 20px 0; border-left: 4px solid #00c000;">
+                    <h3 style="color: #008000; margin-bottom: 20px;">✅ Lịch hẹn được phân công lại cho bạn</h3>
+                    
+                    <p style="font-size: 16px; margin-bottom: 15px;">Chào <strong>%s</strong>,</p>
+                    
+                    <p style="font-size: 16px; line-height: 1.6;">
+                        Bạn vừa được phân công lại một lịch hẹn:
+                    </p>
+                    
+                    <div style="background-color: white; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #008000;">
+                        <p style="margin: 5px 0;"><strong>👤 Khách hàng:</strong> %s</p>
+                        <p style="margin: 5px 0;"><strong>📞 Số điện thoại:</strong> %s</p>
+                        <p style="margin: 5px 0;"><strong>📅 Thời gian:</strong> %s</p>
+                        <p style="margin: 5px 0;"><strong>💼 Dịch vụ:</strong> %s</p>
+                        <p style="margin: 5px 0;"><strong>Ban đầu bởi:</strong> %s</p>
+                    </div>
+                    
+                    <p style="font-size: 16px; color: #008000; font-weight: bold;">
+                        Vui lòng vào hệ thống để xác nhận lịch hẹn này.
+                    </p>
+                    
+                    <p style="font-size: 14px; color: #666; margin-top: 20px;">
+                        Cảm ơn sự hợp tác của bạn!
+                    </p>
+                </div>
+                """, newEmployeeName, customerName, customerPhone != null ? customerPhone : "Chưa cung cấp", timeRange, serviceName, oldEmployeeName
+        );
+        sendHtmlEmailWithLogo(newEmployeeEmail, subject, content);
+    }
+
+    @Async
+    public void sendFeedbackReply(String to, String customerName, String originalComment, String replyContent) throws MessagingException, IOException {
+        String subject = "Phản hồi về góp ý của bạn - BarberShop";
+        String content = String.format(
+                """
+                <div style="padding: 20px; background-color: #f0f8ff; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4CAF50;">
+                    <h3 style="color: #2196F3; margin-bottom: 20px;">✉️ Phản hồi từ BarberShop</h3>
+                    
+                    <p style="font-size: 16px; margin-bottom: 15px;">Chào <strong>%s</strong>,</p>
+                    
+                    <p style="font-size: 16px; line-height: 1.6;">
+                        Chúng tôi đã nhận được góp ý của bạn và xin gửi lời phản hồi như sau:
+                    </p>
+                    
+                    <div style="background-color: #e9e9e9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #ccc;">
+                        <p style="margin: 5px 0; font-weight: bold;">Góp ý của bạn:</p>
+                        <p style="margin: 5px 0;">"%s"</p>
+                    </div>
+                    
+                    <div style="background-color: white; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #4CAF50;">
+                        <p style="margin: 5px 0; font-weight: bold; color: #4CAF50;">Phản hồi từ chúng tôi:</p>
+                        <p style="margin: 5px 0;">"%s"</p>
+                    </div>
+                    
+                    <p style="font-size: 14px; color: #666; margin-top: 20px;">
+                        Cảm ơn bạn đã tin tưởng và gửi góp ý cho chúng tôi!
+                    </p>
+                </div>
+                """, customerName, originalComment, replyContent
+        );
+        sendHtmlEmailWithLogo(to, subject, content);
+    }
+
+    // sendAppointmentCompletion (tồn tại trong file bạn cung cấp, không thay đổi)
     public void sendAppointmentCompletion(String email, String customerName, String employeeName, String timeRange, String serviceName) {
         // Implementation for appointment completion email
+        logger.info("Completion email placeholder called for {}", email);
     }
 }
