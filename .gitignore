@@ -31,3 +31,11 @@ build/
 
 ### VS Code ###
 .vscode/
+/uploads/images/*.jpg
+/uploads/images/*.jpeg
+/uploads/images/*.png
+/uploads/images/*.gif
+/uploads/images/*.web
+/uploads/images/*.jfif
+
+!uploads/images/.gitkeep

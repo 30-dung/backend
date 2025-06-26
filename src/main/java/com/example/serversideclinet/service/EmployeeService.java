@@ -1,3 +1,4 @@
+// service/EmployeeService.java
 package com.example.serversideclinet.service;
 
 import com.example.serversideclinet.dto.AppointmentStatusResponseDTO;
@@ -16,11 +17,15 @@ import com.example.serversideclinet.repository.StoreRepository;
 import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value; // Import Value
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Files; // Import Files
+import java.nio.file.Path; // Import Path
+import java.nio.file.Paths; // Import Paths
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
@@ -42,9 +47,27 @@ public class EmployeeService {
 
     @Autowired
     private RoleRepository roleRepository;
-
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Value("${file.upload-dir}") // Đảm bảo cấu hình thư mục upload
+    private String uploadDir;
+
+    // Helper method to delete old image file
+    private void deleteOldImageFile(String imageUrl) {
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            String fileName = imageUrl.replace("/images/", ""); // Loại bỏ tiền tố
+            Path filePath = Paths.get(uploadDir).resolve(fileName);
+            try {
+                if (Files.exists(filePath) && !Files.isDirectory(filePath)) {
+                    Files.delete(filePath);
+                    System.out.println("Deleted old employee avatar: " + filePath.toString());
+                }
+            } catch (IOException e) {
+                System.err.println("Could not delete old employee avatar " + filePath.toString() + ": " + e.getMessage());
+            }
+        }
+    }
 
     public Employee createEmployee(EmployeeRequestDTO dto) {
         if (employeeRepository.findByEmail(dto.getEmail()).isPresent()) {
@@ -69,7 +92,6 @@ public class EmployeeService {
         // Kiểm tra store
         Store store = storeRepository.findById(dto.getStoreId())
                 .orElseThrow(() -> new RuntimeException("Store không tồn tại"));
-
         // Kiểm tra roles
         List<Role> roles = roleRepository.findAllById(dto.getRoleIds());
         if (roles.size() != dto.getRoleIds().size()) {
@@ -87,15 +109,13 @@ public class EmployeeService {
         employee.setSpecialization(dto.getSpecialization());
         employee.setStore(store);
         employee.setRoles(new HashSet<>(roles));
-        employee.setAvatarUrl(dto.getAvatarUrl());
+        employee.setAvatarUrl(dto.getAvatarUrl()); // Avatar URL sẽ được frontend upload và gửi qua
 
         // *** THÊM PHẦN NÀY: Set lương mặc định ***
         // Lương cơ bản mặc định: 10,000,000 VND
         employee.setBaseSalary(new BigDecimal("10000000.00"));
-
         // Tỷ lệ hoa hồng mặc định: 5% (0.05)
         employee.setCommissionRate(new BigDecimal("0.05"));
-
         // Loại lương: Lương cố định + hoa hồng
         employee.setSalaryType(Employee.SalaryType.MIXED);
 
@@ -109,7 +129,6 @@ public class EmployeeService {
                                          BigDecimal commissionRate, Employee.SalaryType salaryType) {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
-
         if (baseSalary != null) {
             employee.setBaseSalary(baseSalary);
         }
@@ -149,7 +168,6 @@ public class EmployeeService {
     public List<PendingAppointmentDTO> getPendingAppointmentsForEmployee(Integer employeeId) {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên với ID: " + employeeId));
-
         List<Appointment> appointments = appointmentRepository.findByEmployeeAndStatus(employee, Appointment.Status.PENDING);
 
         return appointments.stream().map(appt -> new PendingAppointmentDTO(
@@ -167,21 +185,21 @@ public class EmployeeService {
     public AppointmentStatusResponseDTO updateAppointmentStatus(Integer employeeId, Integer appointmentId, String action) throws MessagingException, IOException {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
-
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy cuộc hẹn"));
-
         if (!appointment.getEmployee().getEmployeeId().equals(employeeId)) {
             throw new RuntimeException("Bạn không có quyền thay đổi cuộc hẹn này");
         }
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"); // <-- Khai báo formatter
-        String timeRange = appointment.getStartTime().format(formatter) + " - " + appointment.getEndTime().format(formatter); // <-- Sử dụng formatter
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        // <-- Khai báo formatter
+        String timeRange = appointment.getStartTime().format(formatter) + " - " + appointment.getEndTime().format(formatter);
+        // <-- Sử dụng formatter
         String customerName = appointment.getUser().getFullName();
-        String customerEmail = appointment.getUser().getEmail(); // Lấy email khách hàng
+        String customerEmail = appointment.getUser().getEmail();
+        // Lấy email khách hàng
         String employeeName = employee.getFullName();
         String serviceName = appointment.getStoreService().getService().getServiceName();
-
         switch (action.toUpperCase()) {
             case "CONFIRM":
                 if (appointment.getStatus() != Appointment.Status.PENDING) {
@@ -214,7 +232,8 @@ public class EmployeeService {
                 }
                 appointment.setStatus(Appointment.Status.COMPLETED);
                 appointment.setCompletedAt(LocalDateTime.now());
-                appointment.setSalaryCalculated(false); // Ensure salary can be calculated
+                appointment.setSalaryCalculated(false);
+                // Ensure salary can be calculated
                 appointmentRepository.save(appointment);
                 emailService.sendAppointmentCompletion(customerEmail, customerName, employeeName, timeRange, serviceName);
                 break;
@@ -251,7 +270,6 @@ public class EmployeeService {
     public Employee updateEmployeeProfile(Integer employeeId, EmployeeProfileUpdateDTO updateDTO) {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên với ID: " + employeeId));
-
         // Kiểm tra email trùng lặp (nếu email được cập nhật và khác email hiện tại của nhân viên)
         if (!employee.getEmail().equals(updateDTO.getEmail()) && employeeRepository.existsByEmail(updateDTO.getEmail())) {
             throw new IllegalArgumentException("Email đã được sử dụng bởi người dùng khác.");
@@ -262,6 +280,13 @@ public class EmployeeService {
             throw new IllegalArgumentException("Số điện thoại đã được sử dụng bởi người dùng khác.");
         }
 
+        // Xóa ảnh cũ nếu avatarUrl thay đổi hoặc bị xóa
+        if (employee.getAvatarUrl() != null && !employee.getAvatarUrl().isEmpty() &&
+                (updateDTO.getAvatarUrl() == null || updateDTO.getAvatarUrl().isEmpty() || // Nếu avatar mới là rỗng
+                        !employee.getAvatarUrl().equals(updateDTO.getAvatarUrl()))) { // Hoặc avatar mới khác cũ
+            deleteOldImageFile(employee.getAvatarUrl());
+        }
+
         employee.setFullName(updateDTO.getFullName());
         employee.setEmail(updateDTO.getEmail());
         employee.setPhoneNumber(updateDTO.getPhoneNumber());
@@ -270,7 +295,7 @@ public class EmployeeService {
             employee.setDateOfBirth(updateDTO.getDateOfBirth().atStartOfDay());
         }
         employee.setSpecialization(updateDTO.getSpecialization());
-        employee.setAvatarUrl(updateDTO.getAvatarUrl());
+        employee.setAvatarUrl(updateDTO.getAvatarUrl()); // Cập nhật URL ảnh mới (hoặc rỗng)
         employee.setUpdatedAt(LocalDateTime.now());
 
         return employeeRepository.save(employee);
@@ -288,7 +313,6 @@ public class EmployeeService {
     public Employee updateEmployeePassword(Integer employeeId, PasswordUpdateDTO passwordUpdateDTO) {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên với ID: " + employeeId));
-
         // 1. Kiểm tra mật khẩu hiện tại có đúng không
         if (!passwordEncoder.matches(passwordUpdateDTO.getCurrentPassword(), employee.getPassword())) {
             throw new IllegalArgumentException("Mật khẩu hiện tại không chính xác.");
@@ -311,7 +335,6 @@ public class EmployeeService {
     public Employee adminUpdateEmployee(Integer employeeId, EmployeeRequestDTO updateDTO) { // Sử dụng EmployeeRequestDTO
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên với ID: " + employeeId));
-
         // Kiểm tra email trùng lặp (nếu email được cập nhật và khác email hiện tại của nhân viên)
         if (!employee.getEmail().equals(updateDTO.getEmail()) && employeeRepository.existsByEmail(updateDTO.getEmail())) {
             throw new IllegalArgumentException("Email đã được sử dụng bởi người dùng khác.");
@@ -321,6 +344,14 @@ public class EmployeeService {
         if (!employee.getPhoneNumber().equals(updateDTO.getPhoneNumber()) && employeeRepository.existsByPhoneNumber(updateDTO.getPhoneNumber())) {
             throw new IllegalArgumentException("Số điện thoại đã được sử dụng bởi người dùng khác.");
         }
+
+        // Xóa ảnh cũ nếu avatarUrl thay đổi hoặc bị xóa
+        if (employee.getAvatarUrl() != null && !employee.getAvatarUrl().isEmpty() &&
+                (updateDTO.getAvatarUrl() == null || updateDTO.getAvatarUrl().isEmpty() || // Nếu avatar mới là rỗng
+                        !employee.getAvatarUrl().equals(updateDTO.getAvatarUrl()))) { // Hoặc avatar mới khác cũ
+            deleteOldImageFile(employee.getAvatarUrl());
+        }
+
 
         // Kiểm tra và cập nhật Store nếu có thay đổi
         if (updateDTO.getStoreId() != null && !employee.getStore().getStoreId().equals(updateDTO.getStoreId())) {
@@ -396,6 +427,4 @@ public class EmployeeService {
 
         return employeeRepository.save(employee);
     }
-
-
 }

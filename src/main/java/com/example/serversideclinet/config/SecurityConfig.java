@@ -15,6 +15,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.firewall.DefaultHttpFirewall;
+import org.springframework.security.web.firewall.HttpFirewall;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
@@ -42,7 +44,10 @@ public class SecurityConfig {
                                 "/api/auth/reset-password",
                                 "/api/auth/register",
                                 "/api/payment/return",     // Cho phép callback sau thanh toán
-                                "/error"                   // Tránh lỗi Whitelabel /error
+                                "/error"    ,
+                                "/api/upload/image",
+                                "/uploads/**",
+                                "/images/**"
                         ).permitAll()
 
                         // ✅ Phân quyền các endpoint còn lại
@@ -81,6 +86,8 @@ public class SecurityConfig {
 
         return http.build();
     }
+
+
 
     @Bean
     public PasswordEncoder passwordEncoder() {

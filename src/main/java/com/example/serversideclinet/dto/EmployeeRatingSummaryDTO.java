@@ -9,5 +9,6 @@ public class EmployeeRatingSummaryDTO {
     private String employeeName;
     private BigDecimal averageRating;
     private Long totalReviews;
-    private String avatarUrl; // Thêm avatarUrl cho nhân viên
+    private String avatarUrl;
+
 }

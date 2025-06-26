@@ -10,5 +10,7 @@ public class ServiceRatingSummaryDTO {
     private String serviceName;
     private BigDecimal averageRating;
     private Long totalReviews;
-    private String serviceImg; // Thêm serviceImg cho dịch vụ
+    private String serviceImg;
+    private String description;
+    private Short durationMinutes;
 }
